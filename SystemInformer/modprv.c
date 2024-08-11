@@ -64,10 +64,14 @@ NTSTATUS PhModuleEnclaveListInitialize(
     _In_ PVOID ThreadParameter
     );
 
+#if (PHNT_VERSION >= PHNT_THRESHOLD)
+
 NTSTATUS PhEnumGenericEnclaveModules(
     _In_ HANDLE ProcessHandle,
     _In_ PVOID Context
     );
+
+#endif
 
 PPH_OBJECT_TYPE PhModuleProviderType = NULL;
 PPH_OBJECT_TYPE PhModuleItemType = NULL;
@@ -706,10 +710,12 @@ VOID PhModuleProviderUpdate(
         modules
         );
 
+#if (PHNT_VERSION >= PHNT_THRESHOLD)
     PhEnumGenericEnclaveModules(
         moduleProvider->ProcessHandle,
         modules
         );
+#endif
 
     // Look for removed modules.
     {
@@ -1065,6 +1071,8 @@ PPH_STRINGREF PhGetModuleEnclaveTypeName(
     return NULL;
 }
 
+#if (PHNT_VERSION >= PHNT_THRESHOLD)
+
 static VOID PhModuleAddEnclaveModule(
     _In_ HANDLE ProcessHandle,
     _In_ PLDR_SOFTWARE_ENCLAVE Enclave,
@@ -1188,6 +1196,8 @@ NTSTATUS PhEnumGenericEnclaveModules(
 
     return status;
 }
+
+#endif
 
 NTSTATUS PhModuleEnclaveListInitialize(
     _In_ PVOID ThreadParameter

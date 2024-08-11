@@ -736,8 +736,10 @@ PPH_STRING KsiDebugLogFileCommon(
     if (Message->Kernel.File.Waiters)
         PhMoveReference(&result, PhConcatStringRefZ(&result->sr, L", waiters"));
 
+#if (PHNT_VERSION >= PHNT_WIN8)
     if (Message->Kernel.File.OplockKeyContext.Version)
         PhMoveReference(&result, PhConcatStringRefZ(&result->sr, L", oplock key"));
+#endif
 
     if (Message->Kernel.File.Transaction)
         PhMoveReference(&result, PhConcatStringRefZ(&result->sr, L", transaction"));

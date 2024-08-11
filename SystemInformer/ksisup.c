@@ -772,14 +772,20 @@ VOID KsiConnect(
     config.PortName = (portName ? &portName->sr : NULL);
     config.Altitude = (altitude ? &altitude->sr : NULL);
     config.FsSupportedFeatures = 0;
+#if (PHNT_VERSION >= PHNT_WIN8)
     if (!!PhGetIntegerSetting(L"KsiEnableFsFeatureOffloadRead"))
         SetFlag(config.FsSupportedFeatures, SUPPORTED_FS_FEATURES_OFFLOAD_READ);
     if (!!PhGetIntegerSetting(L"KsiEnableFsFeatureOffloadWrite"))
         SetFlag(config.FsSupportedFeatures, SUPPORTED_FS_FEATURES_OFFLOAD_WRITE);
+#if (PHNT_VERSION >= PHNT_REDSTONE2)
     if (!!PhGetIntegerSetting(L"KsiEnableFsFeatureQueryOpen"))
         SetFlag(config.FsSupportedFeatures, SUPPORTED_FS_FEATURES_QUERY_OPEN);
+#if (PHNT_VERSION >= PHNT_WIN11)
     if (!!PhGetIntegerSetting(L"KsiEnableFsFeatureBypassIO"))
         SetFlag(config.FsSupportedFeatures, SUPPORTED_FS_FEATURES_BYPASS_IO);
+#endif
+#endif
+#endif
     config.Flags.Flags = 0;
     config.Flags.DisableImageLoadProtection = !!PhGetIntegerSetting(L"KsiDisableImageLoadProtection");
     config.Flags.RandomizedPoolTag = !!PhGetIntegerSetting(L"KsiRandomizedPoolTag");

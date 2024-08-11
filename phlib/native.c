@@ -11342,7 +11342,9 @@ NTSTATUS PhCreateFileWin32ExAlt(
     UNICODE_STRING fileName;
     OBJECT_ATTRIBUTES objectAttributes;
     IO_STATUS_BLOCK ioStatusBlock;
+#if (PHNT_VERSION >= PHNT_WIN11)
     EXTENDED_CREATE_INFORMATION extendedInfo;
+#endif
 
     status = PhDosLongPathNameToNtPathNameWithStatus(
         FileName,
@@ -11362,8 +11364,10 @@ NTSTATUS PhCreateFileWin32ExAlt(
         NULL
         );
 
+#if (PHNT_VERSION >= PHNT_WIN11)
     memset(&extendedInfo, 0, sizeof(EXTENDED_CREATE_INFORMATION));
     extendedInfo.ExtendedCreateFlags = CreateFlags;
+#endif
 
     status = NtCreateFile(
         &fileHandle,
@@ -11375,8 +11379,13 @@ NTSTATUS PhCreateFileWin32ExAlt(
         ShareAccess,
         CreateDisposition,
         CreateOptions | FILE_CONTAINS_EXTENDED_CREATE_INFORMATION,
+#if (PHNT_VERSION >= PHNT_WIN11)
         &extendedInfo,
         sizeof(EXTENDED_CREATE_INFORMATION)
+#else
+        NULL,
+        0
+#endif
         );
 
     if (status == STATUS_SHARING_VIOLATION &&
@@ -11394,8 +11403,13 @@ NTSTATUS PhCreateFileWin32ExAlt(
             ShareAccess,
             CreateDisposition,
             CreateOptions | FILE_CONTAINS_EXTENDED_CREATE_INFORMATION,
+#if (PHNT_VERSION >= PHNT_WIN11)
             &extendedInfo,
             sizeof(EXTENDED_CREATE_INFORMATION),
+#else
+            NULL,
+            0,
+#endif
             IO_IGNORE_SHARE_ACCESS_CHECK
             );
     }
@@ -18530,6 +18544,8 @@ BOOLEAN PhIsAppExecutionAliasTarget(
     return FALSE;
 }
 
+#if (PHNT_VERSION >= PHNT_THRESHOLD)
+
 NTSTATUS PhEnumProcessEnclaves(
     _In_ HANDLE ProcessHandle,
     _In_ PVOID LdrEnclaveList,
@@ -18616,6 +18632,8 @@ NTSTATUS PhEnumProcessEnclaveModules(
 
     return status;
 }
+
+#endif
 
 NTSTATUS PhGetProcessLdrTableEntryNames(
     _In_ HANDLE ProcessHandle,

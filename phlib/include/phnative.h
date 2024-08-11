@@ -3512,6 +3512,8 @@ PhIsAppExecutionAliasTarget(
     _In_ PPH_STRING FileName
     );
 
+#if (PHNT_VERSION >= PHNT_THRESHOLD)
+
 typedef BOOLEAN (NTAPI *PPH_ENUM_PROCESS_ENCLAVES_CALLBACK)(
     _In_ HANDLE ProcessHandle,
     _In_ PVOID EnclaveAddress,
@@ -3547,6 +3549,8 @@ PhEnumProcessEnclaveModules(
     _In_ PPH_ENUM_PROCESS_ENCLAVE_MODULES_CALLBACK Callback,
     _In_opt_ PVOID Context
     );
+
+#endif
 
 PHLIBAPI
 NTSTATUS

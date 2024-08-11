@@ -4721,6 +4721,8 @@ ZwWaitForSingleObject(
     _In_opt_ PLARGE_INTEGER Timeout
     );
 
+#if (PHNT_VERSION >= PHNT_WIN8)
+
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -4731,6 +4733,18 @@ ZwWaitForWorkViaWorkerFactory(
     _Out_ PULONG PacketsReturned,
     _In_ PWORKER_FACTORY_DEFERRED_WORK DeferredWork
     );
+
+#else
+
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
+ZwWaitForWorkViaWorkerFactory(
+    _In_ HANDLE WorkerFactoryHandle,
+    _Out_ PFILE_IO_COMPLETION_INFORMATION MiniPacket
+);
+
+#endif
 
 NTSYSCALLAPI
 NTSTATUS

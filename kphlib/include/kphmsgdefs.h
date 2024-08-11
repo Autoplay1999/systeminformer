@@ -1164,7 +1164,9 @@ typedef struct _KPHM_FILE
 
     ULONG Waiters;                       // FILE_OBJECT.Waiters
     LARGE_INTEGER CurrentByteOffset;     // FILE_OBJECT.CurrentByteOffset
+#if (PHNT_VERSION >= PHNT_WIN8)
     OPLOCK_KEY_CONTEXT OplockKeyContext; // IoGetOplockKeyContextEx
+#endif
 
     PVOID Volume;             // FLT_RELATED_OBJECTS.Volume
     PVOID FileObject;         // FLT_RELATED_OBJECTS.FileObject
