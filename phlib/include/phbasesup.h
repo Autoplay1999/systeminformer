@@ -13,9 +13,7 @@
 #ifndef _PH_PHBASESUP_H
 #define _PH_PHBASESUP_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+EXTERN_C_START
 
 PHLIBAPI
 BOOLEAN
@@ -170,6 +168,9 @@ PhSecondsSince1970ToTime(
 PHLIBAPI
 _May_raise_
 _Post_writable_byte_size_(Size)
+DECLSPEC_ALLOCATOR
+DECLSPEC_NOALIAS
+DECLSPEC_RESTRICT
 PVOID
 NTAPI
 PhAllocate(
@@ -180,6 +181,9 @@ PHLIBAPI
 _Must_inspect_result_
 _Ret_maybenull_
 _Post_writable_byte_size_(Size)
+DECLSPEC_ALLOCATOR
+DECLSPEC_NOALIAS
+DECLSPEC_RESTRICT
 PVOID
 NTAPI
 PhAllocateSafe(
@@ -190,6 +194,9 @@ PHLIBAPI
 _Must_inspect_result_
 _Ret_maybenull_
 _Post_writable_byte_size_(Size)
+DECLSPEC_ALLOCATOR
+DECLSPEC_NOALIAS
+DECLSPEC_RESTRICT
 PVOID
 NTAPI
 PhAllocateExSafe(
@@ -207,6 +214,9 @@ PhFree(
 PHLIBAPI
 _May_raise_
 _Post_writable_byte_size_(Size)
+DECLSPEC_ALLOCATOR
+DECLSPEC_NOALIAS
+DECLSPEC_RESTRICT
 PVOID
 NTAPI
 PhReAllocate(
@@ -218,11 +228,21 @@ PHLIBAPI
 _Must_inspect_result_
 _Ret_maybenull_
 _Post_writable_byte_size_(Size)
+DECLSPEC_ALLOCATOR
+DECLSPEC_NOALIAS
+DECLSPEC_RESTRICT
 PVOID
 NTAPI
 PhReAllocateSafe(
-    _In_ PVOID Memory,
+    _In_opt_ PVOID Memory,
     _In_ SIZE_T Size
+    );
+
+PHLIBAPI
+SIZE_T
+NTAPI
+PhSizeHeap(
+    _In_ PVOID Memory
     );
 
 PHLIBAPI
@@ -230,6 +250,9 @@ _Must_inspect_result_
 _Ret_maybenull_
 _Post_writable_byte_size_(Size)
 _Success_(return != NULL)
+DECLSPEC_ALLOCATOR
+DECLSPEC_NOALIAS
+DECLSPEC_RESTRICT
 PVOID
 NTAPI
 PhAllocatePage(
@@ -572,7 +595,7 @@ PhAcquireRundownProtection(
 {
     ULONG_PTR value;
 
-    value = Protection->Value & ~PH_RUNDOWN_ACTIVE; // fail fast path when rundown is active
+    value = ReadULongPtrAcquire(&Protection->Value) & ~PH_RUNDOWN_ACTIVE; // fail fast path when rundown is active
 
     if ((ULONG_PTR)_InterlockedCompareExchangePointer(
         (PVOID *)&Protection->Value,
@@ -596,7 +619,7 @@ PhReleaseRundownProtection(
 {
     ULONG_PTR value;
 
-    value = Protection->Value & ~PH_RUNDOWN_ACTIVE; // Fail fast path when rundown is active
+    value = ReadULongPtrAcquire(&Protection->Value) & ~PH_RUNDOWN_ACTIVE; // Fail fast path when rundown is active
 
     if ((ULONG_PTR)_InterlockedCompareExchangePointer(
         (PVOID *)&Protection->Value,
@@ -691,28 +714,37 @@ PHLIBAPI
 SIZE_T
 NTAPI
 PhCountStringZ(
-    _In_ PWSTR String
+    _In_ PCWSTR String
     );
+
+FORCEINLINE
+SIZE_T
+PhCountBytesZ(
+    _In_ PCSTR String
+    )
+{
+    return (SIZE_T)strlen(String);
+}
 
 PHLIBAPI
 PSTR
 NTAPI
 PhDuplicateBytesZ(
-    _In_ PSTR String
+    _In_ PCSTR String
     );
 
 PHLIBAPI
 PSTR
 NTAPI
 PhDuplicateBytesZSafe(
-    _In_ PSTR String
+    _In_ PCSTR String
     );
 
 PHLIBAPI
 PWSTR
 NTAPI
 PhDuplicateStringZ(
-    _In_ PWSTR String
+    _In_ PCWSTR String
     );
 
 PHLIBAPI
@@ -720,7 +752,7 @@ _Success_(return)
 BOOLEAN
 NTAPI
 PhCopyBytesZ(
-    _In_ PSTR InputBuffer,
+    _In_ PCSTR InputBuffer,
     _In_ SIZE_T InputCount,
     _Out_writes_opt_z_(OutputCount) PSTR OutputBuffer,
     _In_ SIZE_T OutputCount,
@@ -732,7 +764,7 @@ _Success_(return)
 BOOLEAN
 NTAPI
 PhCopyStringZ(
-    _In_ PWSTR InputBuffer,
+    _In_ PCWSTR InputBuffer,
     _In_ SIZE_T InputCount,
     _Out_writes_opt_z_(OutputCount) PWSTR OutputBuffer,
     _In_ SIZE_T OutputCount,
@@ -744,7 +776,7 @@ _Success_(return)
 BOOLEAN
 NTAPI
 PhCopyStringZFromBytes(
-    _In_ PSTR InputBuffer,
+    _In_ PCSTR InputBuffer,
     _In_ SIZE_T InputCount,
     _Out_writes_opt_z_(OutputCount) PWSTR OutputBuffer,
     _In_ SIZE_T OutputCount,
@@ -756,7 +788,7 @@ _Success_(return)
 BOOLEAN
 NTAPI
 PhCopyStringZFromMultiByte(
-    _In_ PSTR InputBuffer,
+    _In_ PCSTR InputBuffer,
     _In_ SIZE_T InputCount,
     _Out_writes_opt_z_(OutputCount) PWSTR OutputBuffer,
     _In_ SIZE_T OutputCount,
@@ -768,7 +800,7 @@ _Success_(return)
 BOOLEAN
 NTAPI
 PhCopyStringZFromUtf8(
-    _In_ PSTR InputBuffer,
+    _In_ PCSTR InputBuffer,
     _In_ SIZE_T InputCount,
     _Out_writes_opt_z_(OutputCount) PWSTR OutputBuffer,
     _In_ SIZE_T OutputCount,
@@ -779,8 +811,8 @@ PHLIBAPI
 LONG
 NTAPI
 PhCompareStringZNatural(
-    _In_ PWSTR A,
-    _In_ PWSTR B,
+    _In_ PCWSTR A,
+    _In_ PCWSTR B,
     _In_ BOOLEAN IgnoreCase
     );
 
@@ -815,64 +847,64 @@ PhIsDigitCharacter(
 FORCEINLINE
 LONG
 PhCompareBytesZ(
-    _In_ PSTR String1,
-    _In_ PSTR String2,
+    _In_ PCSTR String1,
+    _In_ PCSTR String2,
     _In_ BOOLEAN IgnoreCase
     )
 {
-    if (!IgnoreCase)
-        return strcmp(String1, String2);
-    else
+    if (IgnoreCase)
         return _stricmp(String1, String2);
+    else
+        return strcmp(String1, String2);
 }
 
 FORCEINLINE
 BOOLEAN
 PhEqualBytesZ(
-    _In_ PSTR String1,
-    _In_ PSTR String2,
+    _In_ PCSTR String1,
+    _In_ PCSTR String2,
     _In_ BOOLEAN IgnoreCase
     )
 {
-    if (!IgnoreCase)
-        return strcmp(String1, String2) == 0;
-    else
+    if (IgnoreCase)
         return _stricmp(String1, String2) == 0;
+    else
+        return strcmp(String1, String2) == 0;
 }
 
 FORCEINLINE
 LONG
 PhCompareStringZ(
-    _In_ PWSTR String1,
-    _In_ PWSTR String2,
+    _In_ PCWSTR String1,
+    _In_ PCWSTR String2,
     _In_ BOOLEAN IgnoreCase
     )
 {
-    if (!IgnoreCase)
-        return wcscmp(String1, String2);
-    else
+    if (IgnoreCase)
         return _wcsicmp(String1, String2);
+    else
+        return wcscmp(String1, String2);
 }
 
 FORCEINLINE
 BOOLEAN
 PhEqualStringZ(
-    _In_ PWSTR String1,
-    _In_ PWSTR String2,
+    _In_ PCWSTR String1,
+    _In_ PCWSTR String2,
     _In_ BOOLEAN IgnoreCase
     )
 {
-    if (!IgnoreCase)
-    {
-        return wcscmp(String1, String2) == 0;
-    }
-    else
+    if (IgnoreCase)
     {
         // wcsicmp is very expensive, so we do a quick check for negatives first.
         if (PhAreCharactersDifferent(String1[0], String2[0]))
             return FALSE;
 
         return _wcsicmp(String1, String2) == 0;
+    }
+    else
+    {
+        return wcscmp(String1, String2) == 0;
     }
 }
 
@@ -912,33 +944,33 @@ FORCEINLINE
 VOID
 PhInitializeStringRef(
     _Out_ PPH_STRINGREF String,
-    _In_ PWSTR Buffer
+    _In_ PCWSTR Buffer
     )
 {
     String->Length = wcslen(Buffer) * sizeof(WCHAR);
-    String->Buffer = Buffer;
+    String->Buffer = (PWCH)Buffer;
 }
 
 FORCEINLINE
 VOID
 PhInitializeStringRefLongHint(
     _Out_ PPH_STRINGREF String,
-    _In_ PWSTR Buffer
+    _In_ PCWSTR Buffer
     )
 {
     String->Length = PhCountStringZ(Buffer) * sizeof(WCHAR);
-    String->Buffer = Buffer;
+    String->Buffer = (PWCH)Buffer;
 }
 
 FORCEINLINE
 VOID
 PhInitializeBytesRef(
     _Out_ PPH_BYTESREF Bytes,
-    _In_ PSTR Buffer
+    _In_ PCSTR Buffer
     )
 {
     Bytes->Length = strlen(Buffer) * sizeof(CHAR);
-    Bytes->Buffer = Buffer;
+    Bytes->Buffer = (PCH)Buffer;
 }
 
 FORCEINLINE
@@ -1039,7 +1071,7 @@ FORCEINLINE
 ULONG_PTR
 PhFindStringInStringRefZ(
     _In_ PPH_STRINGREF String,
-    _In_ PWSTR SubString,
+    _In_ PCWSTR SubString,
     _In_ BOOLEAN IgnoreCase
     )
 {
@@ -1117,7 +1149,7 @@ FORCEINLINE
 LONG
 PhCompareStringRef2(
     _In_ PPH_STRINGREF String1,
-    _In_ PWSTR String2,
+    _In_ PCWSTR String2,
     _In_ BOOLEAN IgnoreCase
     )
 {
@@ -1132,7 +1164,7 @@ FORCEINLINE
 BOOLEAN
 PhEqualStringRef2(
     _In_ PPH_STRINGREF String1,
-    _In_ PWSTR String2,
+    _In_ PCWSTR String2,
     _In_ BOOLEAN IgnoreCase
     )
 {
@@ -1166,7 +1198,7 @@ FORCEINLINE
 BOOLEAN
 PhStartsWithStringRef2(
     _In_ PPH_STRINGREF String,
-    _In_ PWSTR Prefix,
+    _In_ PCWSTR Prefix,
     _In_ BOOLEAN IgnoreCase
     )
 {
@@ -1200,7 +1232,7 @@ FORCEINLINE
 BOOLEAN
 PhEndsWithStringRef2(
     _In_ PPH_STRINGREF String,
-    _In_ PWSTR Suffix,
+    _In_ PCWSTR Suffix,
     _In_ BOOLEAN IgnoreCase
     )
 {
@@ -1281,17 +1313,25 @@ typedef struct _PH_STRING
 PHLIBAPI
 PPH_STRING
 NTAPI
-PhCreateString(
-    _In_ PWSTR Buffer
-    );
-
-PHLIBAPI
-PPH_STRING
-NTAPI
 PhCreateStringEx(
-    _In_opt_ PWCHAR Buffer,
+    _In_opt_ PCWCHAR Buffer,
     _In_ SIZE_T Length
     );
+
+/**
+ * Creates a string object from an existing null-terminated string.
+ *
+ * \param Buffer A null-terminated Unicode string.
+ */
+FORCEINLINE
+PPH_STRING
+NTAPI
+PhCreateString(
+    _In_ PCWSTR Buffer
+    )
+{
+    return PhCreateStringEx(Buffer, PhCountStringZ(Buffer) * sizeof(WCHAR));
+}
 
 PHLIBAPI
 PPH_STRING
@@ -1350,7 +1390,7 @@ NTAPI
 PhTrimStringZ(
     _In_ PPH_STRINGREF String,
     _In_ ULONG Flags,
-    _In_ PWSTR TrimCharSet
+    _In_ PCWSTR TrimCharSet
     )
 {
     PH_STRINGREF string;
@@ -1470,8 +1510,8 @@ PHLIBAPI
 PPH_STRING
 NTAPI
 PhConcatStrings2(
-    _In_ PWSTR String1,
-    _In_ PWSTR String2
+    _In_ PCWSTR String1,
+    _In_ PCWSTR String2
     );
 
 PHLIBAPI
@@ -1505,7 +1545,7 @@ FORCEINLINE
 PPH_STRING
 PhConcatStringRefZ(
     _In_ PPH_STRINGREF String1,
-    _In_ PWSTR String2
+    _In_ PCWSTR String2
     )
 {
     PH_STRINGREF string;
@@ -1519,7 +1559,7 @@ PHLIBAPI
 PPH_STRING
 NTAPI
 PhFormatString(
-    _In_ _Printf_format_string_ PWSTR Format,
+    _In_ _Printf_format_string_ PCWSTR Format,
     ...
     );
 
@@ -1527,7 +1567,7 @@ PHLIBAPI
 PPH_STRING
 NTAPI
 PhFormatString_V(
-    _In_ _Printf_format_string_ PWSTR Format,
+    _In_ _Printf_format_string_ PCWSTR Format,
     _In_ va_list ArgPtr
     );
 
@@ -1551,6 +1591,17 @@ PhGetString(
         return NULL;
 }
 
+/**
+ * Retrieves a string reference from a given string object.
+ *
+ * This function returns a `PH_STRINGREF` structure that references the string
+ * contained in the provided `PPH_STRING` object. If the input string object is
+ * `NULL`, it initializes and returns an empty `PH_STRINGREF`.
+ *
+ * @param String A pointer to a `PPH_STRING` object. This parameter is optional and can be `NULL`.
+ * @return A `PH_STRINGREF` structure that references the string in the provided `PPH_STRING` object,
+ *         or an empty `PH_STRINGREF` if the input is `NULL`.
+ */
 FORCEINLINE
 PH_STRINGREF
 PhGetStringRef(
@@ -1567,8 +1618,17 @@ PhGetStringRef(
     return sr;
 }
 
+/**
+ * Retrieves the buffer from a PPH_STRINGREF structure or returns an empty string if the input is NULL.
+ *
+ * This function checks if the provided PPH_STRINGREF structure is not NULL. If it is not NULL, it returns the buffer
+ * contained within the structure. If the structure is NULL, it returns an empty string.
+ *
+ * @param String A pointer to a PPH_STRINGREF structure. This parameter is optional and can be NULL.
+ * @return A pointer to the buffer contained within the PPH_STRINGREF structure if it is not NULL, otherwise an empty string.
+ */
 FORCEINLINE
-PWSTR
+PCWSTR
 PhGetStringRefZ(
     _In_opt_ PPH_STRINGREF String
     )
@@ -1576,19 +1636,17 @@ PhGetStringRefZ(
     if (String)
         return String->Buffer;
     else
-        return (PWSTR)TEXT("");
+        return TEXT("");
 }
 
 /**
  * Retrieves a pointer to a string object's buffer or returns an empty string.
  *
  * \param String A pointer to a string object.
- *
- * \return A pointer to the string object's buffer if the supplied pointer is non-NULL, otherwise an
- * empty string.
+ * \return A pointer to the string object's buffer if the supplied pointer is non-NULL, otherwise an empty string.
  */
 FORCEINLINE
-PWSTR
+PCWSTR
 PhGetStringOrEmpty(
     _In_opt_ PPH_STRING String
     )
@@ -1596,7 +1654,7 @@ PhGetStringOrEmpty(
     if (String)
         return String->Buffer;
     else
-        return (PWSTR)TEXT("");
+        return TEXT("");
 }
 
 /**
@@ -1609,10 +1667,10 @@ PhGetStringOrEmpty(
  * the specified alternative string.
  */
 FORCEINLINE
-PWSTR
+PCWSTR
 PhGetStringOrDefault(
     _In_opt_ PPH_STRING String,
-    _In_ PWSTR DefaultString
+    _In_ PCWSTR DefaultString
     )
 {
     if (String)
@@ -1626,6 +1684,9 @@ PhGetStringOrDefault(
  *
  * \param String A pointer to a string object.
  */
+//_Check_return_ 
+//_Success_(((String != NULL && String->Length != 0) && return == 1))
+//_When_(String != NULL && String->Length != 0 && return == 1, _At_(String, _Post_valid_ _Post_notnull_))
 //FORCEINLINE
 //BOOLEAN
 //PhIsNullOrEmptyString(
@@ -1634,6 +1695,15 @@ PhGetStringOrDefault(
 //{
 //    return !String || String->Length == 0;
 //}
+
+FORCEINLINE
+BOOLEAN
+PhIsNullOrEmptyStringRef(
+    _Pre_maybenull_ PPH_STRINGREF String
+    )
+{
+    return !(String && String->Length);
+}
 
 // VS2019 can't parse the inline bool check for the above PhIsNullOrEmptyString
 // inline function creating invalid C6387 warnings using the input string (dmex)
@@ -1669,10 +1739,10 @@ PhCompareString(
     _In_ BOOLEAN IgnoreCase
     )
 {
-    if (!IgnoreCase)
-        return wcscmp(String1->Buffer, String2->Buffer);
-    else
+    if (IgnoreCase)
         return PhCompareStringRef(&String1->sr, &String2->sr, IgnoreCase); // faster than wcsicmp
+    else
+        return wcscmp(String1->Buffer, String2->Buffer);
 }
 
 /**
@@ -1686,18 +1756,14 @@ FORCEINLINE
 LONG
 PhCompareString2(
     _In_ PPH_STRING String1,
-    _In_ PWSTR String2,
+    _In_ PCWSTR String2,
     _In_ BOOLEAN IgnoreCase
     )
 {
-    if (!IgnoreCase)
-    {
-        return wcscmp(String1->Buffer, String2);
-    }
-    else
-    {
+    if (IgnoreCase)
         return PhCompareStringRef2(&String1->sr, String2, IgnoreCase);
-    }
+    else
+        return wcscmp(String1->Buffer, String2);
 }
 
 /**
@@ -1729,7 +1795,20 @@ PhCompareStringWithNull(
     }
 }
 
-// dmex: Compares two strings, always sorting NULL strings after all other strings.
+/**
+ * Compares two strings with support for null values and customizable sort order.
+ *
+ * This function compares two strings, taking into account the possibility of null values and allowing for customizable sort order.
+ * If both `String1` and `String2` are not null, the function calls `PhCompareString` to perform the comparison.
+ * If `String1` is null and `String2` is not null, the function returns 0 if `String2` is also null, or 1 or -1 based on the specified `Order` (AscendingSortOrder or DescendingSortOrder).
+ * If `String1` is not null and `String2` is null, the function returns -1 or 1 based on the specified `Order`.
+ *
+ * @param String1 The first string to compare.
+ * @param String2 The second string to compare.
+ * @param Order The sort order to use for the comparison (AscendingSortOrder or DescendingSortOrder).
+ * @param IgnoreCase Specifies whether the comparison should be case-insensitive (TRUE) or case-sensitive (FALSE).
+ * @return Returns a negative value if `String1` is less than `String2`, a positive value if `String1` is greater than `String2`, or 0 if they are equal.
+ */
 FORCEINLINE
 LONG
 PhCompareStringWithNullSortOrder(
@@ -1753,6 +1832,20 @@ PhCompareStringWithNullSortOrder(
     }
 }
 
+/**
+ * Compares two strings with support for null values and customizable sort order.
+ *
+ * This function compares two strings, taking into account the possibility of null values and allowing for customizable sort order.
+ * If both `String1` and `String2` are not null, the function calls `PhCompareString` to perform the comparison.
+ * If `String1` is null and `String2` is not null, the function returns 0 if `String2` is also null, or 1 if `String2` is not null, depending on the specified sort order.
+ * If `String1` is not null and `String2` is null, the function returns -1 or 1, depending on the specified sort order.
+ *
+ * @param String1 The first string to compare. Can be null.
+ * @param String2 The second string to compare. Can be null.
+ * @param Order The sort order to use for the comparison. Must be either `AscendingSortOrder` or `DescendingSortOrder`.
+ * @param IgnoreCase Specifies whether the comparison should be case-insensitive (`true`) or case-sensitive (`false`).
+ * @return The result of the comparison. Returns a negative value if `String1` is less than `String2`, 0 if they are equal, or a positive value if `String1` is greater than `String2`.
+ */
 FORCEINLINE
 LONG
 PhCompareStringRefWithNullSortOrder(
@@ -1805,18 +1898,14 @@ FORCEINLINE
 BOOLEAN
 PhEqualString2(
     _In_ PPH_STRING String1,
-    _In_ PWSTR String2,
+    _In_ PCWSTR String2,
     _In_ BOOLEAN IgnoreCase
     )
 {
-    if (!IgnoreCase)
-    {
-        return wcscmp(String1->Buffer, String2) == 0;
-    }
-    else
-    {
+    if (IgnoreCase)
         return PhEqualStringRef2(&String1->sr, String2, IgnoreCase);
-    }
+    else
+        return wcscmp(String1->Buffer, String2) == 0;
 }
 
 /**
@@ -1852,7 +1941,7 @@ FORCEINLINE
 BOOLEAN
 PhStartsWithString2(
     _In_ PPH_STRING String,
-    _In_ PWSTR Prefix,
+    _In_ PCWSTR Prefix,
     _In_ BOOLEAN IgnoreCase
     )
 {
@@ -1896,7 +1985,7 @@ FORCEINLINE
 BOOLEAN
 PhEndsWithString2(
     _In_ PPH_STRING String,
-    _In_ PWSTR Suffix,
+    _In_ PCWSTR Suffix,
     _In_ BOOLEAN IgnoreCase
     )
 {
@@ -1998,7 +2087,7 @@ ULONG_PTR
 PhFindStringInString(
     _In_ PPH_STRING String,
     _In_ SIZE_T StartIndex,
-    _In_ PWSTR SubString
+    _In_ PCWSTR SubString
     )
 {
     PH_STRINGREF sr2;
@@ -2101,14 +2190,14 @@ PHLIBAPI
 PPH_BYTES
 NTAPI
 PhCreateBytes(
-    _In_ PSTR Buffer
+    _In_ PCSTR Buffer
     );
 
 PHLIBAPI
 PPH_BYTES
 NTAPI
 PhCreateBytesEx(
-    _In_opt_ PCHAR Buffer,
+    _In_opt_ PCCH Buffer,
     _In_ SIZE_T Length
     );
 
@@ -2122,12 +2211,12 @@ PhCreateBytes2(
 }
 
 PPH_BYTES PhFormatBytes_V(
-    _In_ _Printf_format_string_ PSTR Format,
+    _In_ _Printf_format_string_ PCSTR Format,
     _In_ va_list ArgPtr
     );
 
 PPH_BYTES PhFormatBytes(
-    _In_ _Printf_format_string_ PSTR Format,
+    _In_ _Printf_format_string_ PCSTR Format,
     ...
     );
 
@@ -2225,7 +2314,7 @@ PHLIBAPI
 VOID
 NTAPI
 PhZeroExtendToUtf16Buffer(
-    _In_reads_bytes_(InputLength) PCH Input,
+    _In_reads_bytes_(InputLength) PCCH Input,
     _In_ SIZE_T InputLength,
     _Out_writes_bytes_(InputLength * sizeof(WCHAR)) PWCH Output
     );
@@ -2234,14 +2323,14 @@ PHLIBAPI
 PPH_STRING
 NTAPI
 PhZeroExtendToUtf16Ex(
-    _In_reads_bytes_(InputLength) PCH Input,
+    _In_reads_bytes_(InputLength) PCCH Input,
     _In_ SIZE_T InputLength
     );
 
 FORCEINLINE
 PPH_STRING
 PhZeroExtendToUtf16(
-    _In_ PSTR Input
+    _In_ PCSTR Input
     )
 {
     return PhZeroExtendToUtf16Ex(Input, strlen(Input));
@@ -2253,7 +2342,7 @@ PHLIBAPI
 PPH_BYTES
 NTAPI
 PhConvertUtf16ToAsciiEx(
-    _In_ PWCH Buffer,
+    _In_ PCWCH Buffer,
     _In_ SIZE_T Length,
     _In_opt_ CHAR Replacement
     );
@@ -2261,7 +2350,7 @@ PhConvertUtf16ToAsciiEx(
 FORCEINLINE
 PPH_BYTES
 PhConvertUtf16ToAscii(
-    _In_ PWSTR Buffer,
+    _In_ PCWSTR Buffer,
     _In_opt_ CHAR Replacement
     )
 {
@@ -2275,14 +2364,14 @@ PHLIBAPI
 PPH_STRING
 NTAPI
 PhConvertMultiByteToUtf16(
-    _In_ PSTR Buffer
+    _In_ PCSTR Buffer
     );
 
 PHLIBAPI
 PPH_STRING
 NTAPI
 PhConvertMultiByteToUtf16Ex(
-    _In_ PCHAR Buffer,
+    _In_ PCSTR Buffer,
     _In_ SIZE_T Length
     );
 
@@ -2293,14 +2382,14 @@ PHLIBAPI
 PPH_BYTES
 NTAPI
 PhConvertUtf16ToMultiByte(
-    _In_ PWSTR Buffer
+    _In_ PCWSTR Buffer
     );
 
 PHLIBAPI
 PPH_BYTES
 NTAPI
 PhConvertUtf16ToMultiByteEx(
-    _In_ PWCHAR Buffer,
+    _In_ PCWCH Buffer,
     _In_ SIZE_T Length
     );
 
@@ -2313,7 +2402,7 @@ BOOLEAN
 NTAPI
 PhConvertUtf8ToUtf16Size(
     _Out_ PSIZE_T BytesInUtf16String,
-    _In_reads_bytes_(BytesInUtf8String) PCH Utf8String,
+    _In_reads_bytes_(BytesInUtf8String) PCCH Utf8String,
     _In_ SIZE_T BytesInUtf8String
     );
 
@@ -2325,7 +2414,7 @@ PhConvertUtf8ToUtf16Buffer(
     _Out_writes_bytes_to_(MaxBytesInUtf16String, *BytesInUtf16String) PWCH Utf16String,
     _In_ SIZE_T MaxBytesInUtf16String,
     _Out_opt_ PSIZE_T BytesInUtf16String,
-    _In_reads_bytes_(BytesInUtf8String) PCH Utf8String,
+    _In_reads_bytes_(BytesInUtf8String) PCCH Utf8String,
     _In_ SIZE_T BytesInUtf8String
     );
 
@@ -2333,14 +2422,14 @@ PHLIBAPI
 PPH_STRING
 NTAPI
 PhConvertUtf8ToUtf16(
-    _In_ PSTR Buffer
+    _In_ PCSTR Buffer
     );
 
 PHLIBAPI
 PPH_STRING
 NTAPI
 PhConvertUtf8ToUtf16Ex(
-    _In_ PCHAR Buffer,
+    _In_ PCCH Buffer,
     _In_ SIZE_T Length
     );
 
@@ -2353,7 +2442,7 @@ BOOLEAN
 NTAPI
 PhConvertUtf16ToUtf8Size(
     _Out_ PSIZE_T BytesInUtf8String,
-    _In_reads_bytes_(BytesInUtf16String) PWCH Utf16String,
+    _In_reads_bytes_(BytesInUtf16String) PCWCH Utf16String,
     _In_ SIZE_T BytesInUtf16String
     );
 
@@ -2365,7 +2454,7 @@ PhConvertUtf16ToUtf8Buffer(
     _Out_writes_bytes_to_(MaxBytesInUtf8String, *BytesInUtf8String) PCH Utf8String,
     _In_ SIZE_T MaxBytesInUtf8String,
     _Out_opt_ PSIZE_T BytesInUtf8String,
-    _In_reads_bytes_(BytesInUtf16String) PWCH Utf16String,
+    _In_reads_bytes_(BytesInUtf16String) PCWCH Utf16String,
     _In_ SIZE_T BytesInUtf16String
     );
 
@@ -2373,16 +2462,46 @@ PHLIBAPI
 PPH_BYTES
 NTAPI
 PhConvertUtf16ToUtf8(
-    _In_ PWSTR Buffer
+    _In_ PCWSTR Buffer
     );
 
 PHLIBAPI
 PPH_BYTES
 NTAPI
 PhConvertUtf16ToUtf8Ex(
-    _In_ PWCHAR Buffer,
+    _In_ PCWCH Buffer,
     _In_ SIZE_T Length
     );
+
+FORCEINLINE
+PPH_BYTES
+NTAPI
+PhConvertStringToUtf8(
+    _In_ PPH_STRING String
+    )
+{
+    return PhConvertUtf16ToUtf8Ex(String->Buffer, String->Length);
+}
+
+FORCEINLINE
+PPH_BYTES
+NTAPI
+PhConvertStringRefToUtf8(
+    _In_ PPH_STRINGREF String
+    )
+{
+    return PhConvertUtf16ToUtf8Ex(String->Buffer, String->Length);
+}
+
+FORCEINLINE
+PPH_STRING
+NTAPI
+PhConvertBytesToUtf16(
+    _In_ PPH_BYTES String
+    )
+{
+    return PhConvertUtf8ToUtf16Ex(String->Buffer, String->Length);
+}
 
 // String builder
 
@@ -2466,7 +2585,7 @@ VOID
 NTAPI
 PhAppendStringBuilder2(
     _Inout_ PPH_STRING_BUILDER StringBuilder,
-    _In_ PWSTR String
+    _In_ PCWSTR String
     )
 {
     PH_STRINGREF string;
@@ -2497,7 +2616,7 @@ VOID
 NTAPI
 PhAppendFormatStringBuilder(
     _Inout_ PPH_STRING_BUILDER StringBuilder,
-    _In_ _Printf_format_string_ PWSTR Format,
+    _In_ _Printf_format_string_ PCWSTR Format,
     ...
     );
 
@@ -2505,7 +2624,7 @@ VOID
 NTAPI
 PhAppendFormatStringBuilder_V(
     _Inout_ PPH_STRING_BUILDER StringBuilder,
-    _In_ _Printf_format_string_ PWSTR Format,
+    _In_ _Printf_format_string_ PCWSTR Format,
     _In_ va_list ArgPtr
     );
 
@@ -2524,7 +2643,7 @@ NTAPI
 PhInsertStringBuilder2(
     _Inout_ PPH_STRING_BUILDER StringBuilder,
     _In_ SIZE_T Index,
-    _In_ PWSTR String
+    _In_ PCWSTR String
     );
 
 PHLIBAPI
@@ -2533,7 +2652,7 @@ NTAPI
 PhInsertStringBuilderEx(
     _Inout_ PPH_STRING_BUILDER StringBuilder,
     _In_ SIZE_T Index,
-    _In_opt_ PWCHAR String,
+    _In_opt_ PCWCHAR String,
     _In_ SIZE_T Length
     );
 
@@ -2636,6 +2755,24 @@ PhAppendBytesBuilderEx(
     _In_ SIZE_T Length,
     _In_opt_ SIZE_T Alignment,
     _Out_opt_ PSIZE_T Offset
+    );
+
+PHLIBAPI
+VOID
+NTAPI
+PhAppendFormatBytesBuilder_V(
+    _Inout_ PPH_BYTES_BUILDER BytesBuilder,
+    _In_ _Printf_format_string_ PCSTR Format,
+    _In_ va_list ArgPtr
+    );
+
+PHLIBAPI
+VOID
+NTAPI
+PhAppendFormatBytesBuilder(
+    _Inout_ PPH_BYTES_BUILDER BytesBuilder,
+    _In_ _Printf_format_string_ PCSTR Format,
+    ...
     );
 
 // Array
@@ -3055,7 +3192,7 @@ VOID
 PhDistributeHashSet(
     _Inout_ PPH_HASH_ENTRY *NewBuckets,
     _In_ ULONG NumberOfNewBuckets,
-    _In_ PPH_HASH_ENTRY *OldBuckets,
+    _In_ CONST PPH_HASH_ENTRY *OldBuckets,
     _In_ ULONG NumberOfOldBuckets
     )
 {
@@ -3123,7 +3260,7 @@ PhAddEntryHashSet(
 FORCEINLINE
 PPH_HASH_ENTRY
 PhFindEntryHashSet(
-    _In_ PPH_HASH_ENTRY *Buckets,
+    _In_ CONST PPH_HASH_ENTRY *Buckets,
     _In_ ULONG NumberOfBuckets,
     _In_ ULONG Hash
     )
@@ -3478,6 +3615,8 @@ typedef struct _PH_KEY_VALUE_PAIR
     PVOID Value;
 } PH_KEY_VALUE_PAIR, *PPH_KEY_VALUE_PAIR;
 
+typedef CONST PH_KEY_VALUE_PAIR *PPCH_KEY_VALUE_PAIR;
+
 PHLIBAPI
 PPH_HASHTABLE
 NTAPI
@@ -3631,7 +3770,7 @@ typedef struct _PH_CALLBACK
     PH_CONDITION BusyCondition;
 } PH_CALLBACK, *PPH_CALLBACK;
 
-#define PH_CALLBACK_DECLARE(Name) PH_CALLBACK Name = { &Name.ListHead, &Name.ListHead, PH_QUEUED_LOCK_INIT, PH_CONDITION_INIT }
+#define PH_CALLBACK_DECLARE(Name) PH_CALLBACK Name = { &(Name).ListHead, &(Name).ListHead, PH_QUEUED_LOCK_INIT, PH_CONDITION_INIT }
 
 PHLIBAPI
 VOID
@@ -3762,14 +3901,24 @@ PhBufferToHexStringBuffer(
     _Out_opt_ PSIZE_T ReturnLength
     );
 
-PHLIBAPI
 _Success_(return)
+PHLIBAPI
 BOOLEAN
 NTAPI
 PhStringToInteger64(
     _In_ PPH_STRINGREF String,
     _In_opt_ ULONG Base,
     _Out_opt_ PLONG64 Integer
+    );
+
+_Success_(return)
+PHLIBAPI
+BOOLEAN
+NTAPI
+PhStringToUInt64(
+    _In_ PPH_STRINGREF String,
+    _In_opt_ ULONG Base,
+    _Out_opt_ PULONG64 Integer
     );
 
 PHLIBAPI
@@ -3824,17 +3973,17 @@ NTAPI
 PhCalculateEntropy(
     _In_ PBYTE Buffer,
     _In_ ULONG64 BufferLength,
-    _Out_opt_ DOUBLE *Entropy,
-    _Out_opt_ DOUBLE *Variance
+    _Out_opt_ FLOAT *Entropy,
+    _Out_opt_ FLOAT *Variance
     );
 
 PHLIBAPI
 PPH_STRING
 NTAPI
 PhFormatEntropy(
-    _In_ DOUBLE Entropy,
+    _In_ FLOAT Entropy,
     _In_ USHORT EntropyPrecision,
-    _In_opt_ DOUBLE Variance,
+    _In_opt_ FLOAT Variance,
     _In_opt_ USHORT VariancePrecision
     );
 
@@ -3926,6 +4075,13 @@ PhTlsAlloc(
     );
 
 PHLIBAPI
+NTSTATUS
+NTAPI
+PhTlsFree(
+    _In_ ULONG Index
+    );
+
+PHLIBAPI
 PVOID
 NTAPI
 PhTlsGetValue(
@@ -3967,7 +4123,7 @@ PhSetLastError(
 FORCEINLINE
 PPH_STRING
 PhaCreateString(
-    _In_ PWSTR Buffer
+    _In_ PCWSTR Buffer
     )
 {
     return PH_AUTO_T(PH_STRING, PhCreateString(Buffer));
@@ -3976,7 +4132,7 @@ PhaCreateString(
 FORCEINLINE
 PPH_STRING
 PhaCreateStringEx(
-    _In_opt_ PWSTR Buffer,
+    _In_opt_ PCWSTR Buffer,
     _In_ SIZE_T Length
     )
 {
@@ -4009,8 +4165,8 @@ PhaConcatStrings(
 FORCEINLINE
 PPH_STRING
 PhaConcatStrings2(
-    _In_ PWSTR String1,
-    _In_ PWSTR String2
+    _In_ PCWSTR String1,
+    _In_ PCWSTR String2
     )
 {
     return PH_AUTO_T(PH_STRING, PhConcatStrings2(String1, String2));
@@ -4019,7 +4175,7 @@ PhaConcatStrings2(
 FORCEINLINE
 PPH_STRING
 PhaFormatString(
-    _In_ _Printf_format_string_ PWSTR Format,
+    _In_ _Printf_format_string_ PCWSTR Format,
     ...
     )
 {
@@ -4093,6 +4249,7 @@ typedef enum _PH_FORMAT_TYPE
     UInt32FormatType,
     UInt64FormatType,
     UIntPtrFormatType,
+    SingleFormatType,
     DoubleFormatType,
     SizeFormatType,
     FormatTypeMask = 0x3f,
@@ -4106,7 +4263,10 @@ typedef enum _PH_FORMAT_TYPE
     /** If not specified, the default value is assumed */
     FormatUseParameter = 0x200,
 
+    //
     // Floating-point flags
+    //
+
     /** Use standard form instead of normal form */
     FormatStandardForm = 0x1000,
     /** Use hexadecimal form instead of normal form */
@@ -4116,7 +4276,10 @@ typedef enum _PH_FORMAT_TYPE
     /** Trailing zeros and possibly the decimal point are trimmed */
     FormatCropZeros = 0x8000,
 
+    //
     // Floating-point and integer flags
+    //
+
     /** Group digits (with floating-point, only works when in normal form) */
     FormatGroupDigits = 0x10000,
     /** Always insert a prefix, '+' for positive and '-' for negative */
@@ -4128,20 +4291,23 @@ typedef enum _PH_FORMAT_TYPE
      */
     FormatPadZeros = 0x40000,
 
+    //
     // General flags
-    /** Applies left alignment. Width must be specified. */
-    FormatLeftAlign = 0x80000000,
+    //
+
+    /** Make characters uppercase (only available for some types) */
+    FormatUpperCase = 0x20000000,
     /** Applies right alignment. Width must be specified. */
     FormatRightAlign = 0x40000000,
-    /** Make characters uppercase (only available for some types) */
-    FormatUpperCase = 0x20000000
+    /** Applies left alignment. Width must be specified. */
+    FormatLeftAlign = 0x80000000,
 } PH_FORMAT_TYPE;
 
 /** Describes an element to be formatted to a string. */
 typedef struct _PH_FORMAT
 {
     /** Specifies the type of the element and optional flags. */
-    PH_FORMAT_TYPE Type;
+    ULONG Type;
     /**
      * The precision of the element. The meaning of this field depends on the element type. For
      * \a Double and \a Size, this field specifies the number of decimal points to include.
@@ -4178,8 +4344,8 @@ typedef struct _PH_FORMAT
         ULONG UInt32;
         ULONG64 UInt64;
         ULONG_PTR UIntPtr;
+        FLOAT Single;
         DOUBLE Double;
-
         ULONG64 Size;
     } u;
 } PH_FORMAT, *PPH_FORMAT;
@@ -4201,7 +4367,7 @@ FORCEINLINE
 VOID
 PhInitFormatS(
     _Out_ PPH_FORMAT Format,
-    _In_ PWSTR String
+    _In_ PCWSTR String
     )
 {
     Format->Type = StringFormatType;
@@ -4234,7 +4400,7 @@ FORCEINLINE
 VOID
 PhInitFormatMultiByteS(
     _Out_ PPH_FORMAT Format,
-    _In_ PSTR String
+    _In_ PCSTR String
     )
 {
     Format->Type = MultiByteStringFormatType;
@@ -4270,7 +4436,7 @@ PhInitFormatX(
     _In_ ULONG UInt32
     )
 {
-    Format->Type = (PH_FORMAT_TYPE)(UInt32FormatType | FormatUseRadix);
+    Format->Type = UInt32FormatType | FormatUseRadix;
     Format->u.UInt32 = UInt32;
     Format->Radix = 16;
 }
@@ -4304,7 +4470,7 @@ PhInitFormatI64UGroupDigits(
     _In_ ULONG64 UInt64
     )
 {
-    Format->Type = (PH_FORMAT_TYPE)(UInt64FormatType | FormatGroupDigits);
+    Format->Type = UInt64FormatType | FormatGroupDigits;
     Format->u.UInt64 = UInt64;
 }
 
@@ -4316,7 +4482,7 @@ PhInitFormatI64UWithWidth(
     _In_ USHORT Width
     )
 {
-    Format->Type = (PH_FORMAT_TYPE)(UInt64FormatType | FormatPadZeros);
+    Format->Type = UInt64FormatType | FormatPadZeros;
     Format->u.UInt64 = UInt64;
     Format->Width = Width;
 }
@@ -4328,7 +4494,7 @@ PhInitFormatI64X(
     _In_ ULONG64 UInt64
     )
 {
-    Format->Type = (PH_FORMAT_TYPE)(UInt64FormatType | FormatUseRadix);
+    Format->Type = UInt64FormatType | FormatUseRadix;
     Format->u.UInt64 = UInt64;
     Format->Radix = 16;
 }
@@ -4351,7 +4517,7 @@ PhInitFormatIX(
     _In_ ULONG_PTR UIntPtr
     )
 {
-    Format->Type = (PH_FORMAT_TYPE)(UIntPtrFormatType | FormatUseRadix);
+    Format->Type = UIntPtrFormatType | FormatUseRadix;
     Format->u.UIntPtr = UIntPtr;
     Format->Radix = 16;
 }
@@ -4363,7 +4529,7 @@ PhInitFormatIXPadZeros(
     _In_ ULONG_PTR UIntPtr
     )
 {
-    Format->Type = (PH_FORMAT_TYPE)(UIntPtrFormatType | FormatUseRadix | FormatPadZeros);
+    Format->Type = UIntPtrFormatType | FormatUseRadix | FormatPadZeros;
     Format->u.UIntPtr = UIntPtr;
     Format->Radix = 16;
     Format->Width = sizeof(ULONG_PTR) * 2;
@@ -4373,11 +4539,24 @@ FORCEINLINE
 VOID
 PhInitFormatF(
     _Out_ PPH_FORMAT Format,
+    _In_ FLOAT Single,
+    _In_ USHORT Precision
+    )
+{
+    Format->Type = SingleFormatType | FormatUsePrecision;
+    Format->u.Single = Single;
+    Format->Precision = Precision;
+}
+
+FORCEINLINE
+VOID
+PhInitFormatFD(
+    _Out_ PPH_FORMAT Format,
     _In_ DOUBLE Double,
     _In_ USHORT Precision
     )
 {
-    Format->Type = (PH_FORMAT_TYPE)(DoubleFormatType | FormatUsePrecision);
+    Format->Type = DoubleFormatType | FormatUsePrecision;
     Format->u.Double = Double;
     Format->Precision = Precision;
 }
@@ -4390,7 +4569,7 @@ PhInitFormatE(
     _In_ USHORT Precision
     )
 {
-    Format->Type = (PH_FORMAT_TYPE)(DoubleFormatType | FormatStandardForm | FormatUsePrecision);
+    Format->Type = DoubleFormatType | FormatStandardForm | FormatUsePrecision;
     Format->u.Double = Double;
     Format->Precision = Precision;
 }
@@ -4403,7 +4582,7 @@ PhInitFormatA(
     _In_ USHORT Precision
     )
 {
-    Format->Type = (PH_FORMAT_TYPE)(DoubleFormatType | FormatHexadecimalForm | FormatUsePrecision);
+    Format->Type = DoubleFormatType | FormatHexadecimalForm | FormatUsePrecision;
     Format->u.Double = Double;
     Format->Precision = Precision;
 }
@@ -4427,7 +4606,7 @@ PhInitFormatSizeWithPrecision(
     _In_ USHORT Precision
     )
 {
-    Format->Type = (PH_FORMAT_TYPE)(SizeFormatType | FormatUsePrecision);
+    Format->Type = SizeFormatType | FormatUsePrecision;
     Format->u.Size = Size;
     Format->Precision = Precision;
 }
@@ -4456,11 +4635,24 @@ PHLIBAPI
 _Success_(return)
 BOOLEAN
 NTAPI
+PhFormatSingleToUtf8(
+    _In_ FLOAT Value,
+    _In_ ULONG Type,
+    _In_ ULONG Precision,
+    _Out_writes_bytes_(BufferLength) PSTR Buffer,
+    _In_opt_ SIZE_T BufferLength,
+    _Out_opt_ PSIZE_T ReturnLength
+    );
+
+PHLIBAPI
+_Success_(return)
+BOOLEAN
+NTAPI
 PhFormatDoubleToUtf8(
     _In_ DOUBLE Value,
     _In_ ULONG Type,
     _In_ ULONG Precision,
-    _Out_writes_bytes_opt_(BufferLength) PSTR Buffer,
+    _Out_writes_bytes_(BufferLength) PSTR Buffer,
     _In_opt_ SIZE_T BufferLength,
     _Out_opt_ PSIZE_T ReturnLength
     );
@@ -4663,8 +4855,6 @@ PhEnumAvlTree(
     _In_opt_ PVOID Context
     );
 
-#ifdef __cplusplus
-}
-#endif
+EXTERN_C_END
 
 #endif

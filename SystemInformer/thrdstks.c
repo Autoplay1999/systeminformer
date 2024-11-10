@@ -331,7 +331,7 @@ VOID PhpThreadStacksMessage(
         return;
 
     va_start(args, Format);
-    message = PhFormatString_V((PWSTR)Format, args);
+    message = PhFormatString_V(Format, args);
     va_end(args);
 
     PhAcquireQueuedLockExclusive(&context->MessageLock);
@@ -783,7 +783,7 @@ VOID PhpThreadStacksProcessPhase2(
         PhpThreadStacksMessage(
             Context,
             L"Walking stacks... %lu%% - %ls (%lu) %lu%%",
-            (ULONG)(((FLOAT)Context->WalkedThreads / Context->TotalThreads) * 100),
+            (ULONG)(((FLOAT)Context->WalkedThreads / (FLOAT)Context->TotalThreads) * 100),
             ProcessNode->ProcessName->Buffer,
             HandleToUlong(ProcessNode->ProcessId),
             (ULONG)(((FLOAT)(i + 1) / ProcessNode->Threads->Count) * 100)
@@ -832,7 +832,7 @@ VOID PhpThreadStacksWorkerPhase2(
         PhpThreadStacksMessage(
             Context,
             L"Walking stacks... %lu%% - %ls (%lu)",
-            (ULONG)(((FLOAT)Context->WalkedThreads / Context->TotalThreads) * 100),
+            (ULONG)(((FLOAT)Context->WalkedThreads / (FLOAT)Context->TotalThreads) * 100),
             node->Process.ProcessName->Buffer,
             HandleToUlong(node->Process.ProcessId)
             );
@@ -1652,7 +1652,7 @@ INT_PTR CALLBACK PhpThreadStacksDlgProc(
                 );
 
             PhpInitializeThreadStacksTree(context);
-   
+
             PhInitializeLayoutManager(&context->LayoutManager, hwndDlg);
             PhAddLayoutItem(&context->LayoutManager, context->SearchWindowHandle, NULL, PH_ANCHOR_LEFT | PH_ANCHOR_TOP | PH_ANCHOR_RIGHT);
             PhAddLayoutItem(&context->LayoutManager, GetDlgItem(hwndDlg, IDC_REFRESH), NULL, PH_ANCHOR_TOP | PH_ANCHOR_RIGHT);

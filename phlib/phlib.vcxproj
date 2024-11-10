@@ -36,7 +36,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
     <PlatformToolset>v143</PlatformToolset>
     <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
@@ -50,14 +50,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
     <PlatformToolset>v143</PlatformToolset>
     <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
     <PlatformToolset>v143</PlatformToolset>
     <SpectreMitigation>false</SpectreMitigation>
   </PropertyGroup>
@@ -114,11 +114,11 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;DEBUG;_DEBUG;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <CallingConvention>StdCall</CallingConvention>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -128,10 +128,10 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
       <BuildStlModules>false</BuildStlModules>
-      <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <DiagnosticsFormat>Caret</DiagnosticsFormat>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <SDLCheck>false</SDLCheck>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
@@ -144,11 +144,11 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;DEBUG;_DEBUG;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <CallingConvention>StdCall</CallingConvention>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -159,10 +159,11 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
       <BuildStlModules>false</BuildStlModules>
-      <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <DiagnosticsFormat>Caret</DiagnosticsFormat>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <SDLCheck>false</SDLCheck>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <ConformanceMode>true</ConformanceMode>
+      <GuardEHContMetadata>true</GuardEHContMetadata>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX64</TargetMachine>
@@ -175,11 +176,11 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;DEBUG;_DEBUG;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -187,10 +188,12 @@
       <LanguageStandard_C Condition="'$(MSBuildVersion)' &gt;= '17.11'">stdclatest</LanguageStandard_C>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <BuildStlModules>false</BuildStlModules>
-      <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <DiagnosticsFormat>Caret</DiagnosticsFormat>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <SDLCheck>false</SDLCheck>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <CallingConvention>StdCall</CallingConvention>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <ConformanceMode>true</ConformanceMode>
+      <GuardSignedReturns>true</GuardSignedReturns>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineARM64</TargetMachine>
@@ -204,7 +207,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;WIN32;NDEBUG;_WINDOWS;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -213,7 +216,6 @@
       <CallingConvention>StdCall</CallingConvention>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <IntelJCCErratum>true</IntelJCCErratum>
       <LanguageStandard>stdcpplatest</LanguageStandard>
@@ -221,10 +223,11 @@
       <LanguageStandard_C Condition="'$(MSBuildVersion)' &gt;= '17.11'">stdclatest</LanguageStandard_C>
       <AdditionalOptions>/utf-8 /d1nodatetime %(AdditionalOptions)</AdditionalOptions>
       <BuildStlModules>false</BuildStlModules>
-      <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <DiagnosticsFormat>Caret</DiagnosticsFormat>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <SDLCheck>false</SDLCheck>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
@@ -238,7 +241,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;WIN64;NDEBUG;_WINDOWS;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN64;NDEBUG;_WINDOWS;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -255,10 +258,11 @@
       <GuardEHContMetadata>true</GuardEHContMetadata>
       <AdditionalOptions>/utf-8 /d1nodatetime %(AdditionalOptions)</AdditionalOptions>
       <BuildStlModules>false</BuildStlModules>
-      <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <DiagnosticsFormat>Caret</DiagnosticsFormat>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <SDLCheck>false</SDLCheck>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX64</TargetMachine>
@@ -272,7 +276,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;WIN64;NDEBUG;_WINDOWS;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN64;NDEBUG;_WINDOWS;_PHLIB_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -286,10 +290,13 @@
       <LanguageStandard_C Condition="'$(MSBuildVersion)' &gt;= '17.11'">stdclatest</LanguageStandard_C>
       <AdditionalOptions>/utf-8 /d1nodatetime %(AdditionalOptions)</AdditionalOptions>
       <BuildStlModules>false</BuildStlModules>
-      <RuntimeTypeInfo>false</RuntimeTypeInfo>
-      <DiagnosticsFormat>Caret</DiagnosticsFormat>
-      <BufferSecurityCheck>false</BufferSecurityCheck>
-      <SDLCheck>false</SDLCheck>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <CallingConvention>StdCall</CallingConvention>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <ConformanceMode>true</ConformanceMode>
+      <GuardSignedReturns>true</GuardSignedReturns>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineARM64</TargetMachine>
@@ -338,6 +345,10 @@
     <ClCompile Include="mapimg.c" />
     <ClCompile Include="maplib.c" />
     <ClCompile Include="native.c" />
+    <ClCompile Include="nativepipe.c" />
+    <ClCompile Include="nativemodule.c" />
+    <ClCompile Include="nativethread.c" />
+    <ClCompile Include="ntuser.c" />
     <ClCompile Include="provider.c" />
     <ClCompile Include="queuedlock.c" />
     <ClCompile Include="ref.c" />
@@ -345,6 +356,7 @@
     <ClCompile Include="secedit.c" />
     <ClCompile Include="secwmi.c" />
     <ClCompile Include="settings.c" />
+    <ClCompile Include="strsrch.c" />
     <ClCompile Include="symprv_std.cpp" />
     <ClCompile Include="theme.c" />
     <ClCompile Include="util.c" />
@@ -361,6 +373,7 @@
     <ClInclude Include="include\appresolver.h" />
     <ClInclude Include="include\appresolverp.h" />
     <ClInclude Include="include\bcd.h" />
+    <ClInclude Include="include\user.h" />
     <ClInclude Include="include\cpysave.h" />
     <ClInclude Include="include\exlf.h" />
     <ClInclude Include="include\exprodid.h" />
@@ -372,6 +385,7 @@
     <ClInclude Include="include\hvsocketcontrol.h" />
     <ClInclude Include="include\json.h" />
     <ClInclude Include="include\kphcomms.h" />
+    <ClInclude Include="include\guisupview.h" />
     <ClInclude Include="include\lsasup.h" />
     <ClInclude Include="include\mapimg.h" />
     <ClInclude Include="include\mapldr.h" />
@@ -391,8 +405,10 @@
     <ClInclude Include="include\secedit.h" />
     <ClInclude Include="include\secwmi.h" />
     <ClInclude Include="include\settings.h" />
+    <ClInclude Include="include\strsrch.h" />
     <ClInclude Include="include\svcsup.h" />
     <ClInclude Include="include\symprvp.h" />
+    <ClInclude Include="include\thirdparty.h" />
     <ClInclude Include="include\treenew.h" />
     <ClInclude Include="include\treenewp.h" />
     <ClInclude Include="include\verify.h" />

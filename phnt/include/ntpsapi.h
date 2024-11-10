@@ -7,73 +7,145 @@
 #ifndef _NTPSAPI_H
 #define _NTPSAPI_H
 
-#if (PHNT_MODE == PHNT_MODE_KERNEL)
+//
+// Process Object Specific Access Rights
+//
+
+#ifndef PROCESS_TERMINATE
 #define PROCESS_TERMINATE 0x0001
+#endif
+#ifndef PROCESS_CREATE_THREAD
 #define PROCESS_CREATE_THREAD 0x0002
+#endif
+#ifndef PROCESS_SET_SESSIONID
 #define PROCESS_SET_SESSIONID 0x0004
+#endif
+#ifndef PROCESS_VM_OPERATION
 #define PROCESS_VM_OPERATION 0x0008
+#endif
+#ifndef PROCESS_VM_READ
 #define PROCESS_VM_READ 0x0010
+#endif
+#ifndef PROCESS_VM_WRITE
 #define PROCESS_VM_WRITE 0x0020
-//#define PROCESS_DUP_HANDLE 0x0040
+#endif
+#ifndef PROCESS_DUP_HANDLE
+#define PROCESS_DUP_HANDLE 0x0040
+#endif
+#ifndef PROCESS_CREATE_PROCESS
 #define PROCESS_CREATE_PROCESS 0x0080
+#endif
+#ifndef PROCESS_SET_QUOTA
 #define PROCESS_SET_QUOTA 0x0100
+#endif
+#ifndef PROCESS_SET_INFORMATION
 #define PROCESS_SET_INFORMATION 0x0200
+#endif
+#ifndef PROCESS_QUERY_INFORMATION
 #define PROCESS_QUERY_INFORMATION 0x0400
-#define PROCESS_SET_PORT 0x0800
-#define PROCESS_SUSPEND_RESUME 0x0800
-#define PROCESS_QUERY_LIMITED_INFORMATION 0x1000
-#else
+#endif
 #ifndef PROCESS_SET_PORT
 #define PROCESS_SET_PORT 0x0800
 #endif
+#ifndef PROCESS_SUSPEND_RESUME
+#define PROCESS_SUSPEND_RESUME 0x0800
+#endif
+#ifndef PROCESS_QUERY_LIMITED_INFORMATION
+#define PROCESS_QUERY_LIMITED_INFORMATION 0x1000
+#endif
+#ifndef PROCESS_SET_LIMITED_INFORMATION
+#define PROCESS_SET_LIMITED_INFORMATION 0x2000
+#endif
+#ifndef PROCESS_ALL_ACCESS
+#if (PHNT_VERSION >= PHNT_VISTA)
+#define PROCESS_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | SPECIFIC_RIGHTS_ALL)
+#else
+#define PROCESS_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xFFF)
+#endif
 #endif
 
-#if (PHNT_MODE == PHNT_MODE_KERNEL)
-#define THREAD_QUERY_INFORMATION 0x0040
-#define THREAD_SET_THREAD_TOKEN 0x0080
-#define THREAD_IMPERSONATE 0x0100
-#define THREAD_DIRECT_IMPERSONATION 0x0200
-#else
+//
+// Thread Object Specific Access Rights
+//
+
+#ifndef THREAD_TERMINATE
+#define THREAD_TERMINATE 0x0001
+#endif
+#ifndef THREAD_SUSPEND_RESUME
+#define THREAD_SUSPEND_RESUME 0x0002
+#endif
 #ifndef THREAD_ALERT
 #define THREAD_ALERT 0x0004
 #endif
+#ifndef THREAD_GET_CONTEXT
+#define THREAD_GET_CONTEXT 0x0008
 #endif
-
-#if (PHNT_MODE == PHNT_MODE_KERNEL)
-#define JOB_OBJECT_ASSIGN_PROCESS 0x0001
-#define JOB_OBJECT_SET_ATTRIBUTES 0x0002
-#define JOB_OBJECT_QUERY 0x0004
-#define JOB_OBJECT_TERMINATE 0x0008
-#define JOB_OBJECT_SET_SECURITY_ATTRIBUTES 0x0010
-#define JOB_OBJECT_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3F)
-//#define JOB_OBJECT_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x1f) // pre-Vista full access
+#ifndef THREAD_SET_CONTEXT
+#define THREAD_SET_CONTEXT 0x0010
 #endif
-
-#define GDI_HANDLE_BUFFER_SIZE32 34
-#define GDI_HANDLE_BUFFER_SIZE64 60
-
-#ifndef _WIN64
-#define GDI_HANDLE_BUFFER_SIZE GDI_HANDLE_BUFFER_SIZE32
+#ifndef THREAD_SET_INFORMATION
+#define THREAD_SET_INFORMATION 0x0020
+#endif
+#ifndef THREAD_QUERY_INFORMATION
+#define THREAD_QUERY_INFORMATION 0x0040
+#endif
+#ifndef THREAD_SET_THREAD_TOKEN
+#define THREAD_SET_THREAD_TOKEN 0x0080
+#endif
+#ifndef THREAD_IMPERSONATE
+#define THREAD_IMPERSONATE 0x0100
+#endif
+#ifndef THREAD_DIRECT_IMPERSONATION
+#define THREAD_DIRECT_IMPERSONATION 0x0200
+#endif
+#ifndef THREAD_SET_LIMITED_INFORMATION
+#define THREAD_SET_LIMITED_INFORMATION 0x0400
+#endif
+#ifndef THREAD_QUERY_LIMITED_INFORMATION
+#define THREAD_QUERY_LIMITED_INFORMATION 0x0800
+#endif
+#ifndef THREAD_RESUME
+#define THREAD_RESUME 0x1000
+#endif
+#ifndef THREAD_ALL_ACCESS
+#if (PHNT_VERSION >= PHNT_VISTA)
+#define THREAD_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | SPECIFIC_RIGHTS_ALL)
 #else
-#define GDI_HANDLE_BUFFER_SIZE GDI_HANDLE_BUFFER_SIZE64
+#define THREAD_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3FF)
+#endif
 #endif
 
-typedef ULONG GDI_HANDLE_BUFFER[GDI_HANDLE_BUFFER_SIZE];
+//
+// Job Object Specific Access Rights
+//
 
-typedef ULONG GDI_HANDLE_BUFFER32[GDI_HANDLE_BUFFER_SIZE32];
-typedef ULONG GDI_HANDLE_BUFFER64[GDI_HANDLE_BUFFER_SIZE64];
+#ifndef JOB_OBJECT_ASSIGN_PROCESS
+#define JOB_OBJECT_ASSIGN_PROCESS 0x0001
+#endif
+#ifndef JOB_OBJECT_SET_ATTRIBUTES
+#define JOB_OBJECT_SET_ATTRIBUTES 0x0002
+#endif
+#ifndef JOB_OBJECT_QUERY
+#define JOB_OBJECT_QUERY 0x0004
+#endif
+#ifndef JOB_OBJECT_TERMINATE
+#define JOB_OBJECT_TERMINATE 0x0008
+#endif
+#ifndef JOB_OBJECT_SET_SECURITY_ATTRIBUTES
+#define JOB_OBJECT_SET_SECURITY_ATTRIBUTES 0x0010
+#endif
+#ifndef JOB_OBJECT_ALL_ACCESS
+#if (PHNT_VERSION >= PHNT_VISTA)
+#define JOB_OBJECT_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x3F)
+#else
+#define JOB_OBJECT_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x1f) // pre-Vista full access
+#endif
+#endif
 
-#ifndef FLS_MAXIMUM_AVAILABLE
-#define FLS_MAXIMUM_AVAILABLE 128
-#endif
-#ifndef TLS_MINIMUM_AVAILABLE
-#define TLS_MINIMUM_AVAILABLE 64
-#endif
-#ifndef TLS_EXPANSION_SLOTS
-#define TLS_EXPANSION_SLOTS 1024
-#endif
+//
+// Process information structures
+//
 
-// symbols
 typedef struct _PEB_LDR_DATA
 {
     ULONG Length;
@@ -98,11 +170,6 @@ typedef struct _INITIAL_TEB
     PVOID StackLimit;
     PVOID StackAllocationBase;
 } INITIAL_TEB, *PINITIAL_TEB;
-
-typedef struct _WOW64_PROCESS
-{
-    PVOID Wow64;
-} WOW64_PROCESS, *PWOW64_PROCESS;
 
 #include <ntpebteb.h>
 
@@ -216,12 +283,12 @@ typedef enum _PROCESSINFOCLASS
     ProcessApplyStateChange,
     ProcessEnableOptionalXStateFeatures, // s: ULONG64 // optional XState feature bitmask
     ProcessAltPrefetchParam, // qs: OVERRIDE_PREFETCH_PARAMETER // App Launch Prefetch (ALPF) // since 22H1
-    ProcessAssignCpuPartitions,
+    ProcessAssignCpuPartitions, // HANDLE
     ProcessPriorityClassEx, // s: PROCESS_PRIORITY_CLASS_EX
     ProcessMembershipInformation, // q: PROCESS_MEMBERSHIP_INFORMATION
     ProcessEffectiveIoPriority, // q: IO_PRIORITY_HINT // 110
     ProcessEffectivePagePriority, // q: ULONG
-    ProcessSchedulerSharedData, // since 24H2
+    ProcessSchedulerSharedData, // SCHEDULER_SHARED_DATA_SLOT_INFORMATION // since 24H2
     ProcessSlistRollbackInformation,
     ProcessNetworkIoCounters, // q: PROCESS_NETWORK_COUNTERS
     ProcessFindFirstThreadByTebValue, // PROCESS_TEB_VALUE_INFORMATION
@@ -332,8 +399,8 @@ typedef struct _PROCESS_EXTENDED_BASIC_INFORMATION
             ULONG IsProcessDeleting : 1;
             ULONG IsCrossSessionCreate : 1;
             ULONG IsFrozen : 1;
-            ULONG IsBackground : 1;
-            ULONG IsStronglyNamed : 1;
+            ULONG IsBackground : 1; // WIN://BGKD
+            ULONG IsStronglyNamed : 1; // WIN://SYSAPPID
             ULONG IsSecureProcess : 1;
             ULONG IsSubsystemProcess : 1;
             ULONG IsTrustedApp : 1; // since 24H2
@@ -487,6 +554,15 @@ typedef struct _PROCESS_FOREGROUND_BACKGROUND
 } PROCESS_FOREGROUND_BACKGROUND, *PPROCESS_FOREGROUND_BACKGROUND;
 
 #if (PHNT_MODE != PHNT_MODE_KERNEL)
+
+// DriveType
+#define DRIVE_UNKNOWN     0
+#define DRIVE_NO_ROOT_DIR 1
+#define DRIVE_REMOVABLE   2
+#define DRIVE_FIXED       3
+#define DRIVE_REMOTE      4
+#define DRIVE_CDROM       5
+#define DRIVE_RAMDISK     6
 
 typedef struct _PROCESS_DEVICEMAP_INFORMATION
 {
@@ -726,6 +802,7 @@ typedef struct _PROCESS_MITIGATION_ACTIVATION_CONTEXT_TRUST_POLICY2
     } DUMMYUNIONNAME;
 } PROCESS_MITIGATION_ACTIVATION_CONTEXT_TRUST_POLICY2, *PPROCESS_MITIGATION_ACTIVATION_CONTEXT_TRUST_POLICY2;
 
+#if defined(_PHLIB_)
 // enum PROCESS_MITIGATION_POLICY
 #define PROCESS_MITIGATION_POLICY ULONG
 #define ProcessDEPPolicy 0
@@ -749,6 +826,7 @@ typedef struct _PROCESS_MITIGATION_ACTIVATION_CONTEXT_TRUST_POLICY2
 #define ProcessSEHOPPolicy 18
 #define ProcessActivationContextTrustPolicy 19
 #define MaxProcessMitigationPolicy 20
+#endif
 
 typedef struct _PROCESS_MITIGATION_POLICY_INFORMATION
 {
@@ -1407,7 +1485,7 @@ NTAPI
 NtCreateProcess(
     _Out_ PHANDLE ProcessHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ HANDLE ParentProcess,
     _In_ BOOLEAN InheritObjectTable,
     _In_opt_ HANDLE SectionHandle,
@@ -1425,7 +1503,7 @@ NtCreateProcess(
 #define PROCESS_CREATE_FLAGS_PROTECTED_PROCESS 0x00000040 // NtCreateUserProcess only
 #define PROCESS_CREATE_FLAGS_CREATE_SESSION 0x00000080 // NtCreateProcessEx & NtCreateUserProcess, requires SeLoadDriver
 #define PROCESS_CREATE_FLAGS_INHERIT_FROM_PARENT 0x00000100 // NtCreateProcessEx & NtCreateUserProcess
-#define PROCESS_CREATE_FLAGS_SUSPENDED 0x00000200 // NtCreateProcessEx & NtCreateUserProcess
+#define PROCESS_CREATE_FLAGS_CREATE_SUSPENDED 0x00000200 // NtCreateProcessEx & NtCreateUserProcess
 #define PROCESS_CREATE_FLAGS_FORCE_BREAKAWAY 0x00000400 // NtCreateProcessEx & NtCreateUserProcess, requires SeTcb
 #define PROCESS_CREATE_FLAGS_MINIMAL_PROCESS 0x00000800 // NtCreateProcessEx only
 #define PROCESS_CREATE_FLAGS_RELEASE_SECTION 0x00001000 // NtCreateProcessEx & NtCreateUserProcess
@@ -1444,7 +1522,7 @@ NTAPI
 NtCreateProcessEx(
     _Out_ PHANDLE ProcessHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ HANDLE ParentProcess,
     _In_ ULONG Flags, // PROCESS_CREATE_FLAGS_*
     _In_opt_ HANDLE SectionHandle,
@@ -1459,7 +1537,7 @@ NTAPI
 NtOpenProcess(
     _Out_ PHANDLE ProcessHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_opt_ PCLIENT_ID ClientId
     );
 
@@ -1491,23 +1569,34 @@ NtResumeProcess(
 #define ZwCurrentThread() NtCurrentThread()
 #define NtCurrentSession() ((HANDLE)(LONG_PTR)-3)
 #define ZwCurrentSession() NtCurrentSession()
+
 #define NtCurrentPeb() (NtCurrentTeb()->ProcessEnvironmentBlock)
+
+#define NtCurrentProcessId() (NtCurrentTeb()->ClientId.UniqueProcess)
+#define NtCurrentThreadId() (NtCurrentTeb()->ClientId.UniqueThread)
 
 // Windows 8 and above
 #define NtCurrentProcessToken() ((HANDLE)(LONG_PTR)-4) // NtOpenProcessToken(NtCurrentProcess())
 #define NtCurrentThreadToken() ((HANDLE)(LONG_PTR)-5) // NtOpenThreadToken(NtCurrentThread())
 #define NtCurrentThreadEffectiveToken() ((HANDLE)(LONG_PTR)-6) // NtOpenThreadToken(NtCurrentThread()) + NtOpenProcessToken(NtCurrentProcess())
-
 #define NtCurrentSilo() ((HANDLE)(LONG_PTR)-1)
 
-// Not NT, but useful.
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
-#define NtCurrentImageBase() ((PVOID)&__ImageBase)
+#define NtCurrentImageBase() ((PIMAGE_DOS_HEADER)&__ImageBase)
 
-// Not NT, but useful.
-#define NtCurrentProcessId() (NtCurrentTeb()->ClientId.UniqueProcess)
-#define NtCurrentThreadId() (NtCurrentTeb()->ClientId.UniqueThread)
+#define NtCurrentSessionId() (RtlGetActiveConsoleId())
+#define NtCurrentLogonId() (NtCurrentPeb()->LogonId)
 
+/**
+ * Retrieves information about the specified process.
+ *
+ * @param ProcessHandle A handle to the process.
+ * @param ProcessInformationClass The type of process information to be retrieved.
+ * @param ProcessInformation A pointer to a buffer that receives the process information.
+ * @param ProcessInformationLength The size of the buffer pointed to by the ProcessInformation parameter.
+ * @param ReturnLength An optional pointer to a variable that receives the size of the data returned.
+ * @return NTSTATUS Successful or errant status.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -1519,10 +1608,19 @@ NtQueryInformationProcess(
     _Out_opt_ PULONG ReturnLength
     );
 
-#if (PHNT_VERSION >= PHNT_WS03)
-
 #define PROCESS_GET_NEXT_FLAGS_PREVIOUS_PROCESS 0x00000001
 
+#if (PHNT_VERSION >= PHNT_WS03)
+/**
+ * Retrieves a handle to the next process in the system.
+ *
+ * @param ProcessHandle An optional handle to the current process.
+ * @param DesiredAccess The access rights desired for the new process handle.
+ * @param HandleAttributes The attributes for the new process handle.
+ * @param Flags Flags that modify the behavior of the function.
+ * @param NewProcessHandle A pointer to a variable that receives the handle to the next process.
+ * @return NTSTATUS Successful or errant status.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -1549,6 +1647,15 @@ NtGetNextThread(
     );
 #endif
 
+/**
+ * Sets information for the specified process.
+ *
+ * @param ProcessHandle A handle to the process.
+ * @param ProcessInformationClass The type of process information to be set.
+ * @param ProcessInformation A pointer to a buffer that contains the process information.
+ * @param ProcessInformationLength The size of the buffer pointed to by the ProcessInformation parameter.
+ * @return NTSTATUS Successful or errant status.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -1578,11 +1685,22 @@ NTAPI
 NtCreateProcessStateChange(
     _Out_ PHANDLE ProcessStateChangeHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ HANDLE ProcessHandle,
-    _In_opt_ ULONG64 Reserved
+    _In_opt_ _Reserved_ ULONG64 Reserved
     );
 
+/**
+ * Changes the suspension state of a process.
+ *
+ * @param ProcessStateChangeHandle A handle to the process state change object.
+ * @param ProcessHandle A handle to the process.
+ * @param StateChangeType The type of state change.
+ * @param ExtendedInformation Optional extended information.
+ * @param ExtendedInformationLength The length of the extended information.
+ * @param Reserved Reserved for future use.
+ * @return NTSTATUS Successful or errant status.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -1590,9 +1708,9 @@ NtChangeProcessState(
     _In_ HANDLE ProcessStateChangeHandle,
     _In_ HANDLE ProcessHandle,
     _In_ PROCESS_STATE_CHANGE_TYPE StateChangeType,
-    _In_opt_ PVOID ExtendedInformation,
-    _In_opt_ SIZE_T ExtendedInformationLength,
-    _In_opt_ ULONG64 Reserved
+    _In_opt_ _Reserved_ PVOID ExtendedInformation,
+    _In_opt_ _Reserved_ SIZE_T ExtendedInformationLength,
+    _In_opt_ _Reserved_ ULONG64 Reserved
     );
 
 #endif
@@ -1606,13 +1724,23 @@ typedef enum _THREAD_STATE_CHANGE_TYPE
 
 #if (PHNT_VERSION >= PHNT_WIN11)
 
+/**
+ * Creates a state change handle for changing the suspension state of a process.
+ *
+ * @param ProcessStateChangeHandle A pointer to a variable that receives the handle.
+ * @param DesiredAccess The access rights desired for the handle.
+ * @param ObjectAttributes Optional attributes for the handle.
+ * @param ProcessHandle A handle to the process.
+ * @param Reserved Reserved for future use.
+ * @return NTSTATUS Successful or errant status.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
 NtCreateThreadStateChange(
     _Out_ PHANDLE ThreadStateChangeHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ HANDLE ThreadHandle,
     _In_opt_ ULONG64 Reserved
     );
@@ -1641,7 +1769,7 @@ NTAPI
 NtCreateThread(
     _Out_ PHANDLE ThreadHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ HANDLE ProcessHandle,
     _Out_ PCLIENT_ID ClientId,
     _In_ PCONTEXT ThreadContext,
@@ -1655,7 +1783,7 @@ NTAPI
 NtOpenThread(
     _Out_ PHANDLE ThreadHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_opt_ PCLIENT_ID ClientId
     );
 
@@ -1683,6 +1811,11 @@ NtResumeThread(
     _Out_opt_ PULONG PreviousSuspendCount
     );
 
+/**
+ * Retrieves the number of the current processor.
+ *
+ * @return ULONG The number of the current processor.
+ */
 NTSYSCALLAPI
 ULONG
 NTAPI
@@ -1691,6 +1824,12 @@ NtGetCurrentProcessorNumber(
     );
 
 #if (PHNT_VERSION >= PHNT_WIN7)
+/**
+ * Retrieves the number of the current processor.
+ *
+ * @param ProcessorNumber An optional pointer to a PROCESSOR_NUMBER structure that receives the processor number.
+ * @return ULONG The number of the current processor.
+ */
 NTSYSCALLAPI
 ULONG
 NTAPI
@@ -1699,6 +1838,13 @@ NtGetCurrentProcessorNumberEx(
     );
 #endif
 
+/**
+ * Retrieves the context of the specified thread.
+ *
+ * @param ThreadHandle A handle to the thread.
+ * @param ThreadContext A pointer to a CONTEXT structure that receives the thread context.
+ * @return NTSTATUS Successful or errant status.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -1707,6 +1853,13 @@ NtGetContextThread(
     _Inout_ PCONTEXT ThreadContext
     );
 
+/**
+ * Sets the context of the specified thread.
+ *
+ * @param ThreadHandle A handle to the thread.
+ * @param ThreadContext A pointer to a CONTEXT structure that specifies the thread context.
+ * @return NTSTATUS Successful or errant status.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -1758,6 +1911,48 @@ NtTestAlert(
     VOID
     );
 
+#if (PHNT_VERSION >= PHNT_WIN8)
+// rev
+/**
+ * Sends an alert to the specified thread.
+ *
+ * @param ThreadId The thread ID of the thread to be alerted.
+ * @return NTSTATUS Successful or errant status.
+ */
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
+NtAlertThreadByThreadId(
+    _In_ HANDLE ThreadId
+    );
+
+#if (PHNT_VERSION >= PHNT_WIN11)
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
+NtAlertThreadByThreadIdEx(
+    _In_ HANDLE ThreadId,
+    _In_opt_ PRTL_SRWLOCK Lock
+    );
+#endif
+
+// rev
+/**
+ * Waits for an alert to be delivered to the specified thread.
+ *
+ * @param Address The address to wait for an alert on.
+ * @param Timeout The timeout value for waiting, or NULL for no timeout.
+ * @return NTSTATUS Successful or errant status.
+ */
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
+NtWaitForAlertByThreadId(
+    _In_opt_ PVOID Address,
+    _In_opt_ PLARGE_INTEGER Timeout
+    );
+#endif
+
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -1786,54 +1981,138 @@ NtSetLdtEntries(
     _In_ ULONG Entry1Hi
     );
 
+/**
+ * Dispatches the Asynchronous Procedure Call (APC) from the NtQueueApc* functions to the specified routine.
+ * 
+ * @param ApcRoutine A pointer to the APC routine to be executed.
+ * @param Parameter Optional. A pointer to a parameter to be passed to the APC routine.
+ * @param ActxContext Optional. A handle to an activation context.
+ * @return VOID This function does not return a value.
+ */
+NTSYSAPI
+VOID
+NTAPI
+RtlDispatchAPC(
+    _In_ PAPCFUNC ApcRoutine,
+    _In_opt_ PVOID Parameter,
+    _In_opt_ HANDLE ActxContext
+    );
+
+/**
+ * A pointer to a function that serves as an APC routine.
+ * 
+ * @param ApcArgument1 Optional. A pointer to the first argument to be passed to the APC routine.
+ * @param ApcArgument2 Optional. A pointer to the second argument to be passed to the APC routine.
+ * @param ApcArgument3 Optional. A pointer to the third argument to be passed to the APC routine.
+ * @return VOID This function does not return a value.
+ */
 typedef VOID (NTAPI* PPS_APC_ROUTINE)(
     _In_opt_ PVOID ApcArgument1,
     _In_opt_ PVOID ApcArgument2,
     _In_opt_ PVOID ApcArgument3
     );
 
+/**
+ * Encodes an APC routine pointer for use in a WOW64 environment.
+ * 
+ * @param ApcRoutine The APC routine pointer to be encoded.
+ * @return PVOID The encoded APC routine pointer.
+ */
 #define Wow64EncodeApcRoutine(ApcRoutine) \
     ((PVOID)((0 - ((LONG_PTR)(ApcRoutine))) << 2))
 
+/**
+ * Decodes an APC routine pointer that was encoded for use in a WOW64 environment.
+ * 
+ * @param ApcRoutine The encoded APC routine pointer to be decoded.
+ * @return PVOID The decoded APC routine pointer.
+ */
 #define Wow64DecodeApcRoutine(ApcRoutine) \
     ((PVOID)(0 - (((LONG_PTR)(ApcRoutine)) >> 2)))
 
+/**
+ * Queues an APC (Asynchronous Procedure Call) to a thread.
+ *
+ * @param ThreadHandle Handle to the thread to which the APC is to be queued.
+ * @param ApcRoutine A pointer to the RtlDispatchAPC function or custom APC routine to be executed.
+ * @param ApcArgument1 Optional first argument to be passed to the APC routine.
+ * @param ApcArgument2 Optional second argument to be passed to the APC routine.
+ * @param ApcArgument3 Optional third argument to be passed to the APC routine.
+ * @return NTSTATUS Successful or errant status.
+ * @remarks The APC will be executed in the context of the specified thread when the thread enters an alertable wait state or when any
+ * process calls the NtTestAlert, NtAlertThread, NtAlertResumeThread or NtAlertThreadByThreadId functions.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
 NtQueueApcThread(
     _In_ HANDLE ThreadHandle,
-    _In_ PPS_APC_ROUTINE ApcRoutine,
+    _In_ PPS_APC_ROUTINE ApcRoutine, // RtlDispatchAPC
     _In_opt_ PVOID ApcArgument1,
     _In_opt_ PVOID ApcArgument2,
     _In_opt_ PVOID ApcArgument3
     );
 
-#if (PHNT_VERSION >= PHNT_WIN7)
-
 #define QUEUE_USER_APC_SPECIAL_USER_APC ((HANDLE)0x1)
 
+#if (PHNT_VERSION >= PHNT_WIN7)
+/**
+ * Queues an APC (Asynchronous Procedure Call) to a thread.
+ *
+ * @param ThreadHandle Handle to the thread to which the APC is to be queued.
+ * @param ReserveHandle Optional handle to a reserve object. This can be QUEUE_USER_APC_SPECIAL_USER_APC or a handle returned by NtAllocateReserveObject.
+ * @param ApcRoutine A pointer to the RtlDispatchAPC function or custom APC routine to be executed.
+ * @param ApcArgument1 Optional first argument to be passed to the APC routine.
+ * @param ApcArgument2 Optional second argument to be passed to the APC routine.
+ * @param ApcArgument3 Optional third argument to be passed to the APC routine.
+ * @return NTSTATUS Successful or errant status.
+ * @remarks The APC will be executed in the context of the specified thread after the thread enters an alertable wait state or immediately
+ * when QUEUE_USER_APC_SPECIAL_USER_APC is used or NtTestAlert, NtAlertThread, NtAlertResumeThread or NtAlertThreadByThreadId are called.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
 NtQueueApcThreadEx(
     _In_ HANDLE ThreadHandle,
-    _In_opt_ HANDLE ReserveHandle, // NtAllocateReserveObject // SPECIAL_USER_APC
-    _In_ PPS_APC_ROUTINE ApcRoutine,
+    _In_opt_ HANDLE ReserveHandle, // NtAllocateReserveObject // QUEUE_USER_APC_SPECIAL_USER_APC
+    _In_ PPS_APC_ROUTINE ApcRoutine, // RtlDispatchAPC
     _In_opt_ PVOID ApcArgument1,
     _In_opt_ PVOID ApcArgument2,
     _In_opt_ PVOID ApcArgument3
     );
-
 #endif
 
+/**
+ * The APC_CALLBACK_DATA_CONTEXT structure is used to pass information to the APC callback routine.
+ */
+typedef struct _APC_CALLBACK_DATA_CONTEXT
+{
+    ULONG_PTR Parameter;
+    PCONTEXT ContextRecord;
+    ULONG_PTR Reserved0;
+    ULONG_PTR Reserved1;
+} APC_CALLBACK_DATA_CONTEXT, *PAPC_CALLBACK_DATA_CONTEXT;
+
+#define QUEUE_USER_APC_FLAGS_NONE 0x00000000
+#define QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC 0x00000001
+#define QUEUE_USER_APC_FLAGS_CALLBACK_DATA_CONTEXT 0x00010000 // APC_CALLBACK_DATA_CONTEXT
+
 #if (PHNT_VERSION >= PHNT_WIN11)
-
-// QUEUE_USER_APC_FLAGS enum (dmex)
-#define QUEUE_USER_APC_FLAGS_NONE               0x0
-#define QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC   0x1
-#define QUEUE_USER_APC_CALLBACK_DATA_CONTEXT    0x00010000 // APC_CALLBACK_DATA
-
+/**
+ * Queues an Asynchronous Procedure Call (APC) to a specified thread.
+ *
+ * @param ThreadHandle A handle to the thread to which the APC is to be queued.
+ * @param ReserveHandle An optional handle to a reserve object. This can be obtained using NtAllocateReserveObject.
+ * @param ApcFlags Flags that control the behavior of the APC. These flags are defined in QUEUE_USER_APC_FLAGS.
+ * @param ApcRoutine A pointer to the RtlDispatchAPC function or custom APC routine to be executed.
+ * @param ApcArgument1 An optional argument to be passed to the APC routine.
+ * @param ApcArgument2 An optional argument to be passed to the APC routine.
+ * @param ApcArgument3 An optional argument to be passed to the APC routine.
+ * @return NTSTATUS Successful or errant status.
+ * @remarks The APC will be executed in the context of the specified thread when the thread enters an alertable wait state or immediately
+ * when QUEUE_USER_APC_SPECIAL_USER_APC is used or any process calls the NtTestAlert, NtAlertThread,
+ * NtAlertResumeThread or NtAlertThreadByThreadId functions.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -1841,7 +2120,7 @@ NtQueueApcThreadEx2(
     _In_ HANDLE ThreadHandle,
     _In_opt_ HANDLE ReserveHandle, // NtAllocateReserveObject
     _In_ ULONG ApcFlags, // QUEUE_USER_APC_FLAGS
-    _In_ PPS_APC_ROUTINE ApcRoutine,
+    _In_ PPS_APC_ROUTINE ApcRoutine, // RtlDispatchAPC
     _In_opt_ PVOID ApcArgument1,
     _In_opt_ PVOID ApcArgument2,
     _In_opt_ PVOID ApcArgument3
@@ -1849,30 +2128,11 @@ NtQueueApcThreadEx2(
 
 #endif
 
-#if (PHNT_VERSION >= PHNT_WIN8)
-
-// rev
-NTSYSCALLAPI
-NTSTATUS
-NTAPI
-NtAlertThreadByThreadId(
-    _In_ HANDLE ThreadId
-    );
-
-// rev
-NTSYSCALLAPI
-NTSTATUS
-NTAPI
-NtWaitForAlertByThreadId(
-    _In_ PVOID Address,
-    _In_opt_ PLARGE_INTEGER Timeout
-    );
-
 #endif
 
-#endif
-
+//
 // User processes and threads
+//
 
 #if (PHNT_MODE != PHNT_MODE_KERNEL)
 
@@ -2387,7 +2647,22 @@ typedef struct _PS_CREATE_INFO
 
 // end_private
 
-#if (PHNT_VERSION >= PHNT_VISTA)
+/**
+ * Creates a new process and primary thread.
+ *
+ * @param ProcessHandle A pointer to a handle that receives the process object handle.
+ * @param ThreadHandle A pointer to a handle that receives the thread object handle.
+ * @param ProcessDesiredAccess The access rights desired for the process object.
+ * @param ThreadDesiredAccess The access rights desired for the thread object.
+ * @param ProcessObjectAttributes Optional. A pointer to an OBJECT_ATTRIBUTES structure that specifies the attributes of the new process.
+ * @param ThreadObjectAttributes Optional. A pointer to an OBJECT_ATTRIBUTES structure that specifies the attributes of the new thread.
+ * @param ProcessFlags Flags that control the creation of the process. These flags are defined as PROCESS_CREATE_FLAGS_*.
+ * @param ThreadFlags Flags that control the creation of the thread. These flags are defined as THREAD_CREATE_FLAGS_*.
+ * @param ProcessParameters Optional. A pointer to a RTL_USER_PROCESS_PARAMETERS structure that specifies the parameters for the new process.
+ * @param CreateInfo A pointer to a PS_CREATE_INFO structure that specifies additional information for the process creation.
+ * @param AttributeList Optional. A pointer to a list of attributes for the process and thread.
+ * @return NTSTATUS Successful or errant status.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -2396,15 +2671,14 @@ NtCreateUserProcess(
     _Out_ PHANDLE ThreadHandle,
     _In_ ACCESS_MASK ProcessDesiredAccess,
     _In_ ACCESS_MASK ThreadDesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ProcessObjectAttributes,
-    _In_opt_ POBJECT_ATTRIBUTES ThreadObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ProcessObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ThreadObjectAttributes,
     _In_ ULONG ProcessFlags, // PROCESS_CREATE_FLAGS_*
     _In_ ULONG ThreadFlags, // THREAD_CREATE_FLAGS_*
-    _In_opt_ PVOID ProcessParameters, // PRTL_USER_PROCESS_PARAMETERS
+    _In_opt_ PRTL_USER_PROCESS_PARAMETERS ProcessParameters,
     _Inout_ PPS_CREATE_INFO CreateInfo,
     _In_opt_ PPS_ATTRIBUTE_LIST AttributeList
     );
-#endif
 
 // begin_rev
 #define THREAD_CREATE_FLAGS_NONE 0x00000000
@@ -2416,19 +2690,39 @@ NtCreateUserProcess(
 #define THREAD_CREATE_FLAGS_BYPASS_PROCESS_FREEZE 0x00000040 // NtCreateThreadEx only, since 19H1
 // end_rev
 
-#if (PHNT_VERSION >= PHNT_VISTA)
-
+/**
+ * A pointer to a user-defined function that serves as the starting routine for a new thread.
+ * 
+ * @param ThreadParameter A pointer to a variable to be passed to the thread.
+ * @return NTSTATUS Successful or errant status.
+ */
 typedef NTSTATUS (NTAPI *PUSER_THREAD_START_ROUTINE)(
     _In_ PVOID ThreadParameter
     );
 
+/**
+ * Creates a new thread in the specified process.
+ *
+ * @param ThreadHandle A pointer to a handle that receives the thread object handle.
+ * @param DesiredAccess The access rights desired for the thread object.
+ * @param ObjectAttributes Optional. A pointer to an OBJECT_ATTRIBUTES structure that specifies the attributes of the new thread.
+ * @param ProcessHandle A handle to the process in which the thread is to be created.
+ * @param StartRoutine A pointer to the application-defined function to be executed by the thread.
+ * @param Argument Optional. A pointer to a variable to be passed to the thread.
+ * @param CreateFlags Flags that control the creation of the thread. These flags are defined as THREAD_CREATE_FLAGS_*.
+ * @param ZeroBits The number of zero bits in the starting address of the thread's stack.
+ * @param StackSize The initial size of the thread's stack, in bytes.
+ * @param MaximumStackSize The maximum size of the thread's stack, in bytes.
+ * @param AttributeList Optional. A pointer to a list of attributes for the thread.
+ * @return NTSTATUS Successful or errant status.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
 NtCreateThreadEx(
     _Out_ PHANDLE ThreadHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ HANDLE ProcessHandle,
     _In_ PUSER_THREAD_START_ROUTINE StartRoutine,
     _In_opt_ PVOID Argument,
@@ -2438,8 +2732,6 @@ NtCreateThreadEx(
     _In_ SIZE_T MaximumStackSize,
     _In_opt_ PPS_ATTRIBUTE_LIST AttributeList
     );
-
-#endif
 
 #endif
 
@@ -2699,7 +2991,7 @@ NTAPI
 NtCreateJobObject(
     _Out_ PHANDLE JobHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes
     );
 
 NTSYSCALLAPI
@@ -2708,7 +3000,7 @@ NTAPI
 NtOpenJobObject(
     _Out_ PHANDLE JobHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes
     );
 
 NTSYSCALLAPI
@@ -2789,35 +3081,182 @@ typedef enum _MEMORY_RESERVE_TYPE
 } MEMORY_RESERVE_TYPE;
 
 #if (PHNT_VERSION >= PHNT_WIN7)
+/**
+ * Allocates a memory reserve object.
+ *
+ * @param MemoryReserveHandle Pointer to a variable that receives the memory reserve object handle.
+ * @param ObjectAttributes Pointer to an object attributes structure.
+ * @param Type The type of memory reserve.
+ * @return NTSTATUS Successful or errant status.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
 NtAllocateReserveObject(
     _Out_ PHANDLE MemoryReserveHandle,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ MEMORY_RESERVE_TYPE Type
     );
 #endif
 
+//
 // Process snapshotting
+//
+
+// Capture/creation flags.
+typedef enum _PSSNT_CAPTURE_FLAGS
+{
+    PSSNT_CAPTURE_NONE                                = 0x00000000,
+    PSSNT_CAPTURE_VA_CLONE                            = 0x00000001,
+    PSSNT_CAPTURE_RESERVED_00000002                   = 0x00000002,
+    PSSNT_CAPTURE_HANDLES                             = 0x00000004,
+    PSSNT_CAPTURE_HANDLE_NAME_INFORMATION             = 0x00000008,
+    PSSNT_CAPTURE_HANDLE_BASIC_INFORMATION            = 0x00000010,
+    PSSNT_CAPTURE_HANDLE_TYPE_SPECIFIC_INFORMATION    = 0x00000020,
+    PSSNT_CAPTURE_HANDLE_TRACE                        = 0x00000040,
+    PSSNT_CAPTURE_THREADS                             = 0x00000080,
+    PSSNT_CAPTURE_THREAD_CONTEXT                      = 0x00000100,
+    PSSNT_CAPTURE_THREAD_CONTEXT_EXTENDED             = 0x00000200,
+    PSSNT_CAPTURE_RESERVED_00000400                   = 0x00000400,
+    PSSNT_CAPTURE_VA_SPACE                            = 0x00000800,
+    PSSNT_CAPTURE_VA_SPACE_SECTION_INFORMATION        = 0x00001000,
+    PSSNT_CAPTURE_IPT_TRACE                           = 0x00002000,
+    PSSNT_CAPTURE_RESERVED_00004000                   = 0x00004000,
+
+    PSSNT_CREATE_BREAKAWAY_OPTIONAL                   = 0x04000000,
+    PSSNT_CREATE_BREAKAWAY                            = 0x08000000,
+    PSSNT_CREATE_FORCE_BREAKAWAY                      = 0x10000000,
+    PSSNT_CREATE_USE_VM_ALLOCATIONS                   = 0x20000000,
+    PSSNT_CREATE_MEASURE_PERFORMANCE                  = 0x40000000,
+    PSSNT_CREATE_RELEASE_SECTION                      = 0x80000000
+} PSSNT_CAPTURE_FLAGS;
+DEFINE_ENUM_FLAG_OPERATORS(PSSNT_CAPTURE_FLAGS);
+
+typedef enum _PSSNT_DUPLICATE_FLAGS
+{
+    PSSNT_DUPLICATE_NONE         = 0x00,
+    PSSNT_DUPLICATE_CLOSE_SOURCE = 0x01
+} PSSNT_DUPLICATE_FLAGS;
+DEFINE_ENUM_FLAG_OPERATORS(PSSNT_DUPLICATE_FLAGS);
+
+typedef enum _PSSNT_QUERY_INFORMATION_CLASS
+{
+    PSSNT_QUERY_PROCESS_INFORMATION = 0, // PSS_PROCESS_INFORMATION
+    PSSNT_QUERY_VA_CLONE_INFORMATION = 1, // PSS_VA_CLONE_INFORMATION
+    PSSNT_QUERY_AUXILIARY_PAGES_INFORMATION = 2, // PSS_AUXILIARY_PAGES_INFORMATION
+    PSSNT_QUERY_VA_SPACE_INFORMATION = 3, // PSS_VA_SPACE_INFORMATION
+    PSSNT_QUERY_HANDLE_INFORMATION = 4, // PSS_HANDLE_INFORMATION
+    PSSNT_QUERY_THREAD_INFORMATION = 5, // PSS_THREAD_INFORMATION
+    PSSNT_QUERY_HANDLE_TRACE_INFORMATION = 6, // PSS_HANDLE_TRACE_INFORMATION
+    PSSNT_QUERY_PERFORMANCE_COUNTERS = 7 // PSS_PERFORMANCE_COUNTERS
+} PSSNT_QUERY_INFORMATION_CLASS;
+
+#define PSSNT_SIGNATURE_PSSD 'PSSD' // 0x50535344
 
 #if (PHNT_VERSION >= PHNT_WINBLUE)
 // rev
-NTSYSCALLAPI
+/**
+ * Captures a snapshot of the specified process.
+ * 
+ * @param SnapshotHandle Pointer to a variable that receives the snapshot handle.
+ * @param ProcessHandle Handle to the process.
+ * @param CaptureFlags Flags indicating what to capture.
+ * @param ThreadContextFlags Optional flags for capturing thread context.
+ * @return NTSTATUS Successful or errant status.
+ */
+NTSYSAPI
 NTSTATUS
 NTAPI
 PssNtCaptureSnapshot(
     _Out_ PHANDLE SnapshotHandle,
     _In_ HANDLE ProcessHandle,
-    _In_ ULONG CaptureFlags,
-    _In_ ULONG ThreadContextFlags
+    _In_ PSSNT_CAPTURE_FLAGS CaptureFlags,
+    _In_opt_ ULONG ThreadContextFlags
+    );
+
+// rev
+/**
+ * Duplicates a process snapshot from one process to another.
+ * 
+ * @param SourceProcessHandle Handle to the source process.
+ * @param SnapshotHandle Handle to the snapshot to duplicate.
+ * @param TargetProcessHandle Handle to the target process.
+ * @param TargetSnapshotHandle Pointer to a variable that receives the duplicated snapshot handle.
+ * @param Flags Optional flags for duplication.
+ * @return NTSTATUS Successful or errant status.
+ */
+NTSYSAPI
+NTSTATUS
+NTAPI
+PssNtDuplicateSnapshot(
+    _In_ HANDLE SourceProcessHandle,
+    _In_ HANDLE SnapshotHandle,
+    _In_ HANDLE TargetProcessHandle,
+    _Out_ PHANDLE TargetSnapshotHandle,
+    _In_opt_ PSSNT_DUPLICATE_FLAGS Flags
+    );
+
+// rev
+/**
+ * Frees a remote process snapshot.
+ * 
+ * @param ProcessHandle A handle to the process that contains the snapshot. The handle must have PROCESS_VM_READ, PROCESS_VM_OPERATION, and PROCESS_DUP_HANDLE rights. 
+ * @param SnapshotHandle Handle to the snapshot to free.
+ * @return NTSTATUS Successful or errant status.
+ */
+NTSYSAPI
+NTSTATUS
+NTAPI
+PssNtFreeSnapshot(
+    _In_ HANDLE SnapshotHandle
+    );
+
+// rev
+/**
+ * Frees a snapshot.
+ * 
+ * @param SnapshotHandle Handle to the snapshot to free.
+ * @return NTSTATUS Successful or errant status.
+ */
+NTSYSAPI
+NTSTATUS
+NTAPI
+PssNtFreeRemoteSnapshot(
+    _In_ HANDLE ProcessHandle,
+    _In_ HANDLE SnapshotHandle
+    );
+
+// rev
+/**
+ * Queries information from a the specified snapshot.
+ * 
+ * @param SnapshotHandle Handle to the snapshot.
+ * @param InformationClass The information class to query.
+ * @param Buffer Pointer to a buffer that receives the queried information.
+ * @param BufferLength Length of the buffer.
+ * @return NTSTATUS Successful or errant status.
+ */
+NTSYSAPI
+NTSTATUS
+NTAPI
+PssNtQuerySnapshot(
+    _In_ HANDLE SnapshotHandle,
+    _In_ PSSNT_QUERY_INFORMATION_CLASS InformationClass,
+    _Out_writes_bytes_(BufferLength) PVOID Buffer,
+    _In_ ULONG BufferLength
     );
 #endif
 
 // rev
+/**
+ * Flag indicating the type of bulk information to query.
+ */
 #define MEMORY_BULK_INFORMATION_FLAG_BASIC 0x00000001
 
 // rev
+/**
+ * The NTPSS_MEMORY_BULK_INFORMATION structure is used to query basic memory information in bulk for a process.
+ */
 typedef struct _NTPSS_MEMORY_BULK_INFORMATION
 {
     ULONG QueryFlags;
@@ -2827,6 +3266,16 @@ typedef struct _NTPSS_MEMORY_BULK_INFORMATION
 
 #if (PHNT_VERSION >= PHNT_20H1)
 // rev
+/**
+ * Captures virtual address space bulk information for a process.
+ *
+ * @param ProcessHandle Handle to the process.
+ * @param BaseAddress Optional base address to start the capture.
+ * @param BulkInformation Pointer to the memory bulk information structure.
+ * @param BulkInformationLength Length of the memory bulk information structure.
+ * @param ReturnLength Optional pointer to a variable that receives the length of the captured information.
+ * @return NTSTATUS Successful or errant status.
+ */
 NTSYSCALLAPI
 NTSTATUS
 NTAPI

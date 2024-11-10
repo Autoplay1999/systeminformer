@@ -5,7 +5,7 @@
  *
  * Authors:
  *
- *     jxy-s   2022-2023
+ *     jxy-s   2022-2024
  *
  */
 
@@ -61,13 +61,12 @@
 // hash
 
 #define KPH_TAG_HASHING_CONTEXT                 '0HpK'
-#define KPH_TAG_AUTHENTICODE_SIG                '1HpK'
-#define KPH_TAG_HASHING_INFRA                   '2HpK'
-#define KPH_TAG_CAPTURED_HASHES                 '3HpK'
+#define KPH_TAG_HASHING_INFRA                   '1HpK'
+#define KPH_TAG_CAPTURED_HASHES                 '2HpK'
 
-// sign
+// verify
 
-#define KPH_TAG_SIGNING_INFRA                   '0SpK'
+#define KPH_TAG_VERIFY_SIGNATURE                '0VpK'
 
 // informer
 
@@ -89,6 +88,7 @@
 #define KPH_TAG_PROCESS_CONTEXT                 '2cpK'
 #define KPH_TAG_THREAD_CONTEXT                  '3cpK'
 #define KPH_TAG_CID_APC                         '4cpK'
+#define KPH_TAG_PROCESS_IMAGE_FILE_NAME         '5cpK'
 
 // protection
 

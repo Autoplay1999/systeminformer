@@ -470,7 +470,11 @@ BOOLEAN NTAPI PvSymbolTreeNewCallback(
         return TRUE;
     case TreeNewSortChanged:
         {
-            TreeNew_GetSort(hwnd, &context->TreeNewSortColumn, &context->TreeNewSortOrder);
+            PPH_TREENEW_SORT_CHANGED_EVENT sorting = Parameter1;
+
+            context->TreeNewSortColumn = sorting->SortColumn;
+            context->TreeNewSortOrder = sorting->SortOrder;
+
             TreeNew_NodesStructured(hwnd);
         }
         return TRUE;
@@ -489,14 +493,6 @@ BOOLEAN NTAPI PvSymbolTreeNewCallback(
                         text = PhGetTreeNewText(hwnd, 0);
                         PhSetClipboardString(hwnd, &text->sr);
                         PhDereferenceObject(text);
-                    }
-                }
-                break;
-            case 'A':
-                {
-                    if (GetKeyState(VK_CONTROL) < 0)
-                    {
-                        TreeNew_SelectRange(hwnd, 0, -1);
                     }
                 }
                 break;
@@ -1068,7 +1064,16 @@ INT_PTR CALLBACK PvpSymbolsDlgProc(
             SetBkMode((HDC)wParam, TRANSPARENT);
             SetTextColor((HDC)wParam, RGB(0, 0, 0));
             SetDCBrushColor((HDC)wParam, RGB(255, 255, 255));
-            return (INT_PTR)GetStockBrush(DC_BRUSH);
+            return (INT_PTR)PhGetStockBrush(DC_BRUSH);
+        }
+        break;
+    case WM_KEYDOWN:
+        {
+            if (LOWORD(wParam) == 'K' && GetKeyState(VK_CONTROL) < 0)
+            {
+                SetFocus(context->SearchHandle);
+                return TRUE;
+            }
         }
         break;
     }

@@ -11,6 +11,14 @@
 
 #include "updater.h"
 
+#include <kphdyn.h>
+
+typedef struct _UPDATER_PLATFORM_SUPPORT_ENTRY
+{
+    USHORT Class;
+    PH_STRINGREF FileName;
+} UPDATER_PLATFORM_SUPPORT_ENTRY, *PUPDATER_PLATFORM_SUPPORT_ENTRY;
+
 HWND UpdateDialogHandle = NULL;
 HANDLE UpdateDialogThreadHandle = NULL;
 PH_EVENT InitializedEvent = PH_EVENT_INIT;
@@ -65,7 +73,7 @@ PPH_UPDATER_CONTEXT CreateUpdateContext(
     context = PhCreateObjectZero(sizeof(PH_UPDATER_CONTEXT), UpdateContextType);
     context->StartupCheck = StartupCheck;
     context->Cleanup = TRUE;
-    context->PortableMode = !!ProcessHacker_IsPortableMode();
+    context->PortableMode = !!SystemInformer_IsPortableMode();
     context->Channel = PhGetPhReleaseChannel();
 
     return context;
@@ -88,7 +96,7 @@ NTSTATUS UpdateShellExecute(
     parameters = PH_AUTO(PhCreateKsiSettingsBlob());
     parameters = PH_AUTO(PhConcatStrings(3, L"-update \"", PhGetStringOrEmpty(parameters), L"\""));
 
-    ProcessHacker_PrepareForEarlyShutdown();
+    SystemInformer_PrepareForEarlyShutdown();
 
     status = PhShellExecuteEx(
         WindowHandle,
@@ -105,11 +113,11 @@ NTSTATUS UpdateShellExecute(
     {
         Context->Cleanup = FALSE;
 
-        ProcessHacker_Destroy();
+        SystemInformer_Destroy();
     }
     else
     {
-        ProcessHacker_CancelEarlyShutdown();
+        SystemInformer_CancelEarlyShutdown();
 
         if (status != STATUS_CANCELLED) // Ignore UAC decline.
         {
@@ -174,7 +182,7 @@ VOID TaskDialogLinkClicked(
 //    VOID
 //    )
 //{
-//    static PH_STRINGREF keyName = PH_STRINGREF_INIT(L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\ProcessHacker");
+//    static PH_STRINGREF keyName = PH_STRINGREF_INIT(L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\SystemInformer");
 //    static PH_STRINGREF key2xName = PH_STRINGREF_INIT(L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Process_Hacker2_is1");
 //    HANDLE keyHandle = NULL;
 //
@@ -279,43 +287,205 @@ PPH_STRING UpdateVersionString(
     }
 }
 
+NTSTATUS UpdatePlatformSupportInformation(
+    _In_ PPH_STRINGREF FileName,
+    _Out_ PUSHORT ImageMachine,
+    _Out_ PULONG TimeDateStamp,
+    _Out_ PULONG SizeOfImage,
+    _Out_ PPH_STRING* HashString
+    )
+{
+    NTSTATUS status;
+    HANDLE fileHandle;
+    PH_MAPPED_IMAGE mappedImage;
+    LARGE_INTEGER fileSize;
+    PH_HASH_CONTEXT hashContext;
+    ULONG64 bytesRemaining;
+    BYTE buffer[PAGE_SIZE];
+    BYTE hash[256 / 8];
+
+    if (!NT_SUCCESS(status = PhCreateFile(
+        &fileHandle,
+        FileName,
+        FILE_GENERIC_READ,
+        FILE_ATTRIBUTE_NORMAL,
+        FILE_SHARE_READ | FILE_SHARE_DELETE,
+        FILE_OPEN,
+        FILE_NON_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT
+        )))
+        return status;
+
+    if (!NT_SUCCESS(status = PhGetFileSize(fileHandle, &fileSize)))
+        goto CleanupExit;
+
+    PhInitializeHash(&hashContext, Sha256HashAlgorithm);
+
+    bytesRemaining = (ULONG64)fileSize.QuadPart;
+
+    while (bytesRemaining)
+    {
+        IO_STATUS_BLOCK iosb;
+
+        status = NtReadFile(
+            fileHandle,
+            NULL,
+            NULL,
+            NULL,
+            &iosb,
+            buffer,
+            sizeof(buffer),
+            NULL,
+            NULL
+            );
+
+        if (!NT_SUCCESS(status))
+            break;
+
+        PhUpdateHash(&hashContext, buffer, (ULONG)iosb.Information);
+        bytesRemaining -= (ULONG)iosb.Information;
+    }
+
+    if (NT_SUCCESS(status = PhLoadMappedImageHeaderPageSize(NULL, fileHandle, &mappedImage)))
+    {
+        *ImageMachine = mappedImage.NtHeaders->FileHeader.Machine;
+        *TimeDateStamp = mappedImage.NtHeaders->FileHeader.TimeDateStamp;
+        *SizeOfImage = mappedImage.NtHeaders->OptionalHeader.SizeOfImage;
+
+        PhFinalHash(&hashContext, hash, sizeof(hash), NULL);
+        *HashString = PhBufferToHexString(hash, sizeof(hash));
+
+        PhUnloadMappedImage(&mappedImage);
+    }
+
+CleanupExit:
+
+    NtClose(fileHandle);
+
+    return status;
+}
+
+PPH_STRING UpdatePlatformSupportString(
+    VOID
+    )
+{
+    static PH_STRINGREF platformHeader = PH_STRINGREF_INIT(L"SystemInformer-PlatformSupport: ");
+    static UPDATER_PLATFORM_SUPPORT_ENTRY platformFiles[] =
+    {
+        { KPH_DYN_CLASS_NTOSKRNL, PH_STRINGREF_INIT(L"\\SystemRoot\\System32\\ntoskrnl.exe") },
+        { KPH_DYN_CLASS_NTKRLA57, PH_STRINGREF_INIT(L"\\SystemRoot\\System32\\ntkrla57.exe") },
+        { KPH_DYN_CLASS_LXCORE,   PH_STRINGREF_INIT(L"\\SystemRoot\\System32\\drivers\\lxcore.sys") },
+    };
+
+    PH_STRING_BUILDER stringBuilder;
+
+    PhInitializeStringBuilder(&stringBuilder, 30);
+
+    PhAppendStringBuilder(&stringBuilder, &platformHeader);
+    PhAppendStringBuilder2(&stringBuilder, L"{\"version\":1,");
+    PhAppendStringBuilder2(&stringBuilder, L"\"files\":[");
+
+    for (ULONG i = 0; i < RTL_NUMBER_OF(platformFiles); i++)
+    {
+        USHORT imageMachine;
+        ULONG timeDateStamp;
+        ULONG sizeOfImage;
+        PPH_STRING hashString;
+
+        if (NT_SUCCESS(UpdatePlatformSupportInformation(
+            &platformFiles[i].FileName,
+            &imageMachine,
+            &timeDateStamp,
+            &sizeOfImage,
+            &hashString
+            )))
+        {
+            PH_FORMAT format[11];
+            PPH_STRING string;
+
+            PhInitFormatS(&format[0], L"{\"hash\":\"");
+            PhInitFormatSR(&format[1], hashString->sr);
+            PhInitFormatS(&format[2], L"\",\"file\":");
+            PhInitFormatU(&format[3], platformFiles[i].Class);
+            PhInitFormatS(&format[4], L",\"machine\":");
+            PhInitFormatU(&format[5], imageMachine);
+            PhInitFormatS(&format[6], L",\"timestamp\":");
+            PhInitFormatU(&format[7], timeDateStamp);
+            PhInitFormatS(&format[8], L",\"size\":");
+            PhInitFormatU(&format[9], sizeOfImage);
+            PhInitFormatS(&format[10], L"},");
+
+            string = PhFormat(format, RTL_NUMBER_OF(format), 10);
+
+            PhAppendStringBuilder(&stringBuilder, &string->sr);
+
+            PhDereferenceObject(string);
+            PhDereferenceObject(hashString);
+        }
+    }
+
+    if (PhEndsWithString2(stringBuilder.String, L",", FALSE))
+        PhRemoveEndStringBuilder(&stringBuilder, 1);
+
+    PhAppendStringBuilder2(&stringBuilder, L"]}");
+
+    return PhFinalStringBuilderString(&stringBuilder);
+}
+
 PPH_STRING UpdateWindowsString(
     VOID
     )
 {
     PPH_STRING buildString = NULL;
-    PPH_STRING fileName = NULL;
-    PPH_STRING fileVersion = NULL;
+    PPH_STRING fileName;
+    PH_MAPPED_IMAGE mappedImage;
+    USHORT imageMachine = 0;
+    ULONG timeDateStamp = 0;
+    ULONG sizeOfImage = 0;
+    PVOID imageBase;
+    ULONG imageSize;
     PVOID versionInfo;
-    VS_FIXEDFILEINFO* rootBlock;
-    PH_FORMAT fileVersionFormat[3];
 
-    fileName = PhGetKernelFileName2();
-    versionInfo = PhGetFileVersionInfoEx(&fileName->sr);
-    PhDereferenceObject(fileName);
-
-    if (versionInfo)
+    if (NT_SUCCESS(PhGetKernelFileNameEx(&fileName, &imageBase, &imageSize)))
     {
-        if (rootBlock = PhGetFileVersionFixedInfo(versionInfo))
+        if (NT_SUCCESS(PhLoadMappedImageHeaderPageSize(&fileName->sr, NULL, &mappedImage)))
         {
-            PhInitFormatU(&fileVersionFormat[0], HIWORD(rootBlock->dwFileVersionLS));
-            PhInitFormatC(&fileVersionFormat[1], '.');
-            PhInitFormatU(&fileVersionFormat[2], LOWORD(rootBlock->dwFileVersionLS));
+            if (mappedImage.Magic == IMAGE_NT_OPTIONAL_HDR32_MAGIC)
+            {
+                imageMachine = mappedImage.NtHeaders32->FileHeader.Machine;
+                timeDateStamp = mappedImage.NtHeaders32->FileHeader.TimeDateStamp;
+                sizeOfImage = mappedImage.NtHeaders32->OptionalHeader.SizeOfImage;
+            }
+            else if (mappedImage.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+            {
+                imageMachine = mappedImage.NtHeaders->FileHeader.Machine;
+                timeDateStamp = mappedImage.NtHeaders->FileHeader.TimeDateStamp;
+                sizeOfImage = mappedImage.NtHeaders->OptionalHeader.SizeOfImage;
+            }
 
-            fileVersion = PhFormat(fileVersionFormat, 3, 0);
+            PhUnloadMappedImage(&mappedImage);
         }
 
-        PhFree(versionInfo);
-    }
+        if (versionInfo = PhGetFileVersionInfoEx(&fileName->sr))
+        {
+            VS_FIXEDFILEINFO* rootBlock;
 
-    if (fileVersion)
-    {
-        if (PhIsExecutingInWow64())
-            buildString = PhFormatString(L"%s: %s.%s", L"SystemInformer-OsBuild", fileVersion->Buffer, L"x86fre");
-        else
-            buildString = PhFormatString(L"%s: %s.%s", L"SystemInformer-OsBuild", fileVersion->Buffer, L"amd64fre");
+            if (rootBlock = PhGetFileVersionFixedInfo(versionInfo))
+            {
+                PH_FORMAT format[5];
 
-        PhDereferenceObject(fileVersion);
+                PhInitFormatS(&format[0], L"SystemInformer-OsBuild: ");
+                PhInitFormatU(&format[1], HIWORD(rootBlock->dwFileVersionLS));
+                PhInitFormatC(&format[2], '.');
+                PhInitFormatU(&format[3], LOWORD(rootBlock->dwFileVersionLS));
+                PhInitFormatS(&format[4], PhIsExecutingInWow64() ? L"_64" : L"_32");
+
+                buildString = PhFormat(format, RTL_NUMBER_OF(format), 0);
+            }
+
+            PhFree(versionInfo);
+        }
+
+        PhDereferenceObject(fileName);
     }
 
     return buildString;
@@ -436,6 +606,7 @@ BOOLEAN QueryUpdateData(
     {
         PPH_STRING versionHeader;
         PPH_STRING windowsHeader;
+        PPH_STRING platformHeader;
 
         if (versionHeader = UpdateVersionString())
         {
@@ -447,6 +618,12 @@ BOOLEAN QueryUpdateData(
         {
             PhHttpSocketAddRequestHeaders(httpContext, windowsHeader->Buffer, (ULONG)windowsHeader->Length / sizeof(WCHAR));
             PhDereferenceObject(windowsHeader);
+        }
+
+        if (platformHeader = UpdatePlatformSupportString())
+        {
+            PhHttpSocketAddRequestHeaders(httpContext, platformHeader->Buffer, (ULONG)platformHeader->Length / sizeof(WCHAR));
+            PhDereferenceObject(platformHeader);
         }
     }
 
@@ -855,7 +1032,10 @@ NTSTATUS UpdateDownloadThread(
 
         // Check the number of bytes written are the same we downloaded.
         if (bytesDownloaded != isb.Information)
+        {
+            context->ErrorCode = PhNtStatusToDosError(STATUS_DATA_CHECKSUM_ERROR);
             goto CleanupExit;
+        }
 
 #ifdef FORCE_SLOW_STATUS_TIMER
         PhDelayExecution(1);
@@ -913,6 +1093,10 @@ NTSTATUS UpdateDownloadThread(
     if (hashSuccess && signatureSuccess)
     {
         downloadSuccess = TRUE;
+    }
+    else
+    {
+        context->ErrorCode = PhNtStatusToDosError(STATUS_DATA_CHECKSUM_ERROR);
     }
 
 CleanupExit:
@@ -1109,12 +1293,12 @@ HRESULT CALLBACK TaskDialogBootstrapCallback(
 
     switch (uMsg)
     {
-    case TDN_CREATED:
+    case TDN_DIALOG_CONSTRUCTED:
         {
             UpdateDialogHandle = context->DialogHandle = hwndDlg;
 
             // Center the update window on PH if it's visible else we center on the desktop.
-            PhCenterWindow(hwndDlg, PhMainWindowHandle);
+            PhCenterWindow(hwndDlg, SystemInformer_GetWindowHandle());
 
             // Create the Taskdialog icons.
             PhSetApplicationWindowIcon(hwndDlg);
@@ -1169,7 +1353,7 @@ NTSTATUS ShowUpdateDialogThread(
     config.pszContent = L"Initializing...";
     config.lpCallbackData = (LONG_PTR)context;
     config.pfCallback = TaskDialogBootstrapCallback;
-    TaskDialogIndirect(&config, NULL, NULL, NULL);
+    PhShowTaskDialog(&config, NULL, NULL, NULL);
 
     PhDereferenceObject(context);
     PhDeleteAutoPool(&autoPool);
@@ -1274,7 +1458,7 @@ VOID ShowStartupUpdateDialog(
     config.pszContent = L"Initializing...";
     config.lpCallbackData = (LONG_PTR)context;
     config.pfCallback = TaskDialogBootstrapCallback;
-    TaskDialogIndirect(&config, NULL, NULL, NULL);
+    PhShowTaskDialog(&config, NULL, NULL, NULL);
 
 CleanupExit:
     PhDereferenceObject(context);

@@ -44,6 +44,7 @@ static ULONG PhMipRefreshAutomatically;
 static BOOLEAN PhMipPinned;
 
 static HWND PhMipWindow = NULL;
+static HWND PhMipLayoutWindow = NULL;
 static PH_LAYOUT_MANAGER PhMipLayoutManager;
 static RECT MinimumSize;
 static PH_CALLBACK_REGISTRATION ProcessesUpdatedRegistration;
@@ -58,7 +59,7 @@ VOID PhPinMiniInformation(
     _In_ LONG PinCount,
     _In_opt_ ULONG PinDelayMs,
     _In_ ULONG Flags,
-    _In_opt_ PWSTR SectionName,
+    _In_opt_ PCWSTR SectionName,
     _In_opt_ PPOINT SourcePoint
     )
 {
@@ -104,7 +105,7 @@ VOID PhPinMiniInformation(
             PhMipContainerWindow = CreateWindowEx(
                 WS_EX_TOOLWINDOW,
                 MAKEINTATOM(windowAtom),
-                PhApplicationName,
+                NULL,
                 WS_BORDER | WS_THICKFRAME | WS_POPUP,
                 0,
                 0,
@@ -259,6 +260,7 @@ INT_PTR CALLBACK PhMipMiniInfoDialogProc(
     case WM_INITDIALOG:
         {
             PhMipWindow = hwndDlg;
+            PhMipLayoutWindow = GetDlgItem(hwndDlg, IDC_LAYOUT);
             PhMipOnInitDialog();
         }
         break;
@@ -347,8 +349,6 @@ VOID PhMipContainerOnShowWindow(
             NULL,
             &ProcessesUpdatedRegistration
             );
-
-        PhMipContainerOnSize();
     }
     else
     {
@@ -464,7 +464,7 @@ VOID PhMipOnInitDialog(
     SET_BUTTON_ICON(PhMipWindow, IDC_PINWINDOW, pin);
 
     PhInitializeLayoutManager(&PhMipLayoutManager, PhMipWindow);
-    PhAddLayoutItem(&PhMipLayoutManager, GetDlgItem(PhMipWindow, IDC_LAYOUT), NULL, PH_ANCHOR_ALL);
+    PhAddLayoutItem(&PhMipLayoutManager, PhMipLayoutWindow, NULL, PH_ANCHOR_ALL);
     PhAddLayoutItem(&PhMipLayoutManager, sectionWindow, NULL, PH_ANCHOR_LEFT | PH_ANCHOR_RIGHT | PH_ANCHOR_BOTTOM | PH_LAYOUT_FORCE_INVALIDATE);
     PhAddLayoutItem(&PhMipLayoutManager, GetDlgItem(PhMipWindow, IDC_OPTIONS), NULL, PH_ANCHOR_RIGHT | PH_ANCHOR_BOTTOM);
     PhAddLayoutItem(&PhMipLayoutManager, GetDlgItem(PhMipWindow, IDC_PINWINDOW), NULL, PH_ANCHOR_RIGHT | PH_ANCHOR_BOTTOM);
@@ -472,9 +472,9 @@ VOID PhMipOnInitDialog(
     Button_SetCheck(GetDlgItem(PhMipWindow, IDC_PINWINDOW), !!PhGetIntegerSetting(L"MiniInfoWindowPinned"));
 
     // Subclass the window procedure.
-    oldWndProc = (WNDPROC)GetWindowLongPtr(sectionWindow, GWLP_WNDPROC);
+    oldWndProc = PhGetWindowProcedure(sectionWindow);
     PhSetWindowContext(sectionWindow, 0xF, oldWndProc);
-    SetWindowLongPtr(sectionWindow, GWLP_WNDPROC, (LONG_PTR)PhMipSectionControlHookWndProc);
+    PhSetWindowProcedure(sectionWindow, PhMipSectionControlHookWndProc);
 }
 
 VOID PhMipOnShowWindow(
@@ -851,7 +851,7 @@ PPH_MINIINFO_SECTION PhMipFindSection(
 }
 
 PPH_MINIINFO_SECTION PhMipCreateInternalSection(
-    _In_ PWSTR Name,
+    _In_ PCWSTR Name,
     _In_ ULONG Flags,
     _In_ PPH_MINIINFO_SECTION_CALLBACK Callback
     )
@@ -955,9 +955,10 @@ VOID PhMipLayout(
     )
 {
     RECT clientRect;
-    RECT rect;
+    RECT windowRect;
 
     GetClientRect(PhMipContainerWindow, &clientRect);
+
     MoveWindow(
         PhMipWindow,
         clientRect.left, clientRect.top,
@@ -967,42 +968,42 @@ VOID PhMipLayout(
 
     PhLayoutManagerLayout(&PhMipLayoutManager);
 
-    GetWindowRect(GetDlgItem(PhMipWindow, IDC_LAYOUT), &rect);
-    MapWindowPoints(NULL, PhMipWindow, (POINT *)&rect, 2);
+    GetWindowRect(PhMipLayoutWindow, &windowRect);
+    MapWindowRect(NULL, PhMipWindow, &windowRect);
 
     if (CurrentSection && CurrentSection->DialogHandle)
     {
         if (CurrentSection->Flags & PH_MINIINFO_SECTION_NO_UPPER_MARGINS)
         {
-            rect.left = 0;
-            rect.top = 0;
-            rect.right = clientRect.right;
+            windowRect.left = 0;
+            windowRect.top = 0;
+            windowRect.right = clientRect.right;
         }
         else
         {
-            LONG leftDistance = rect.left - clientRect.left;
-            LONG rightDistance = clientRect.right - rect.right;
+            LONG leftDistance = windowRect.left - clientRect.left;
+            LONG rightDistance = clientRect.right - windowRect.right;
             LONG minDistance;
 
             if (leftDistance != rightDistance)
             {
                 // HACK: Enforce symmetry. Sometimes these are off by a pixel.
                 minDistance = min(leftDistance, rightDistance);
-                rect.left = clientRect.left + minDistance;
-                rect.right = clientRect.right - minDistance;
+                windowRect.left = clientRect.left + minDistance;
+                windowRect.right = clientRect.right - minDistance;
             }
         }
 
         MoveWindow(
             CurrentSection->DialogHandle,
-            rect.left, rect.top,
-            rect.right - rect.left, rect.bottom - rect.top,
+            windowRect.left, windowRect.top,
+            windowRect.right - windowRect.left, windowRect.bottom - windowRect.top,
             TRUE
             );
     }
 
-    GetWindowRect(GetDlgItem(PhMipWindow, IDC_PINWINDOW), &rect);
-    MapWindowPoints(NULL, PhMipWindow, (POINT *)&rect, 2);
+    //GetWindowRect(GetDlgItem(PhMipWindow, IDC_PINWINDOW), &windowRect);
+    //MapWindowPoints(NULL, PhMipWindow, (POINT *)&rect, 2);
 }
 
 VOID PhMipBeginChildControlPin(
@@ -1025,7 +1026,7 @@ VOID PhMipRefresh(
     )
 {
     if (PhMipPinned)
-        ProcessHacker_Refresh();
+        SystemInformer_Refresh();
 
     PostMessage(PhMipWindow, MIP_MSG_UPDATE, 0, 0);
 }
@@ -1214,7 +1215,7 @@ LRESULT CALLBACK PhMipSectionControlHookWndProc(
 }
 
 PPH_MINIINFO_LIST_SECTION PhMipCreateListSection(
-    _In_ PWSTR Name,
+    _In_ PCWSTR Name,
     _In_ ULONG Flags,
     _In_ PPH_MINIINFO_LIST_SECTION Template
     )
@@ -1237,7 +1238,7 @@ PPH_MINIINFO_LIST_SECTION PhMipCreateListSection(
 }
 
 PPH_MINIINFO_LIST_SECTION PhMipCreateInternalListSection(
-    _In_ PWSTR Name,
+    _In_ PCWSTR Name,
     _In_ ULONG Flags,
     _In_ PPH_MINIINFO_LIST_SECTION_CALLBACK Callback
     )
@@ -1253,8 +1254,8 @@ PPH_MINIINFO_LIST_SECTION PhMipCreateInternalListSection(
 BOOLEAN PhMipListSectionCallback(
     _In_ PPH_MINIINFO_SECTION Section,
     _In_ PH_MINIINFO_SECTION_MESSAGE Message,
-    _In_opt_ PVOID Parameter1,
-    _In_opt_ PVOID Parameter2
+    _In_ PVOID Parameter1,
+    _In_ PVOID Parameter2
     )
 {
     PPH_MINIINFO_LIST_SECTION listSection = Section->Context;
@@ -1289,16 +1290,17 @@ BOOLEAN PhMipListSectionCallback(
                 // We don't want to hold process item references while the mini info window
                 // is hidden.
                 PhMipClearListSection(listSection);
-                TreeNew_NodesStructured(listSection->TreeNewHandle);
+
+                if (listSection->TreeNewHandle)
+                {
+                    TreeNew_NodesStructured(listSection->TreeNewHandle);
+                }
             }
         }
         break;
     case MiniInfoCreateDialog:
         {
             PPH_MINIINFO_CREATE_DIALOG createDialog = Parameter1;
-
-            if (!createDialog)
-                break;
 
             createDialog->Instance = PhInstanceHandle;
             createDialog->Template = MAKEINTRESOURCE(IDD_MINIINFO_LIST);
@@ -1351,9 +1353,9 @@ INT_PTR CALLBACK PhMipListSectionDialogProc(
             layoutItem->Margin.right = -1;
 
             PhSetControlTheme(listSection->TreeNewHandle, L"explorer");
+            TreeNew_SetRedraw(listSection->TreeNewHandle, FALSE);
             TreeNew_SetCallback(listSection->TreeNewHandle, PhMipListSectionTreeNewCallback, listSection);
             TreeNew_SetRowHeight(listSection->TreeNewHandle, PhMipCalculateRowHeight(hwndDlg));
-            TreeNew_SetRedraw(listSection->TreeNewHandle, FALSE);
             PhAddTreeNewColumnEx2(listSection->TreeNewHandle, MIP_SINGLE_COLUMN_ID, TRUE, L"Process", 1,
                 PH_ALIGN_LEFT, 0, 0, TN_COLUMN_FLAG_CUSTOMDRAW);
             TreeNew_SetRedraw(listSection->TreeNewHandle, TRUE);
@@ -1364,13 +1366,18 @@ INT_PTR CALLBACK PhMipListSectionDialogProc(
         break;
     case WM_DESTROY:
         {
-            PhDeleteLayoutManager(&listSection->LayoutManager);
             PhRemoveWindowContext(hwndDlg, PH_WINDOW_CONTEXT_DEFAULT);
+
+            PhDeleteLayoutManager(&listSection->LayoutManager);
+
+            listSection->TreeNewHandle = NULL;
+            listSection->DialogHandle = NULL;
         }
         break;
     case WM_SIZE:
         {
             PhLayoutManagerLayout(&listSection->LayoutManager);
+
             TreeNew_AutoSizeColumn(listSection->TreeNewHandle, MIP_SINGLE_COLUMN_ID, TN_AUTOSIZE_REMAINING_SPACE);
         }
         break;
@@ -1429,8 +1436,11 @@ VOID PhMipTickListSection(
         ListSection->Callback(ListSection, MiListSectionAssignSortData, &assignSortData, NULL);
     }
 
-    TreeNew_NodesStructured(ListSection->TreeNewHandle);
-    TreeNew_AutoSizeColumn(ListSection->TreeNewHandle, MIP_SINGLE_COLUMN_ID, TN_AUTOSIZE_REMAINING_SPACE);
+    if (ListSection->TreeNewHandle)
+    {
+        TreeNew_NodesStructured(ListSection->TreeNewHandle);
+        TreeNew_AutoSizeColumn(ListSection->TreeNewHandle, MIP_SINGLE_COLUMN_ID, TN_AUTOSIZE_REMAINING_SPACE);
+    }
 
     ListSection->Callback(ListSection, MiListSectionTick, NULL, NULL);
 }
@@ -1449,6 +1459,9 @@ VOID PhMipClearListSection(
         PhMipDestroyGroupNode(ListSection->NodeList->Items[i]);
 
     PhClearList(ListSection->NodeList);
+
+    PhDereferenceObject(ListSection->NodeList);
+    ListSection->NodeList = PhCreateList(2);
 }
 
 LONG PhMipCalculateRowHeight(
@@ -1945,21 +1958,27 @@ VOID PhMipHandleListSectionCommand(
                     PhAddItemList(nodes, node);
             }
 
+            i = nodes->Count;
             PhPinMiniInformation(MiniInfoIconPinType, -1, 0, 0, NULL, NULL);
             PhPinMiniInformation(MiniInfoActivePinType, -1, 0, 0, NULL, NULL);
             PhPinMiniInformation(MiniInfoHoverPinType, -1, 0, 0, NULL, NULL);
 
-            ProcessHacker_ToggleVisible(TRUE);
-            ProcessHacker_SelectTabPage(0);
+            SystemInformer_ToggleVisible(TRUE);
+            SystemInformer_SelectTabPage(0);
             PhSelectAndEnsureVisibleProcessNodes((PPH_PROCESS_NODE*)nodes->Items, nodes->Count);
             PhDereferenceObject(nodes);
+
+            if (ProcessGroup->Processes->Count == 1 && i == 0)
+            {
+                PhShowStatus(PhMainWndHandle, L"The process does not exist.", STATUS_INVALID_CID, 0);
+            }
         }
         break;
     }
 }
 
 BOOLEAN PhMipCpuListSectionCallback(
-    _In_ struct _PH_MINIINFO_LIST_SECTION *ListSection,
+    _In_ PPH_MINIINFO_LIST_SECTION ListSection,
     _In_ PH_MINIINFO_LIST_SECTION_MESSAGE Message,
     _In_opt_ PVOID Parameter1,
     _In_opt_ PVOID Parameter2
@@ -1973,7 +1992,7 @@ BOOLEAN PhMipCpuListSectionCallback(
 
             // CPU    %.2f%%
             PhInitFormatS(&format[0], L"CPU    ");
-            PhInitFormatF(&format[1], ((DOUBLE)PhCpuUserUsage + PhCpuKernelUsage) * 100, PhMaxPrecisionUnit);
+            PhInitFormatF(&format[1], (PhCpuUserUsage + PhCpuKernelUsage) * 100, PhMaxPrecisionUnit);
             PhInitFormatC(&format[2], L'%');
 
             ListSection->Section->Parameters->SetSectionText(ListSection->Section,
@@ -2027,6 +2046,7 @@ BOOLEAN PhMipCpuListSectionCallback(
             PPH_LIST processes;
             FLOAT cpuUsage;
             PPH_STRING cpuUsageText;
+            PH_FORMAT format[3];
 
             if (!getUsageText)
                 break;
@@ -2034,18 +2054,22 @@ BOOLEAN PhMipCpuListSectionCallback(
             processes = getUsageText->ProcessGroup->Processes;
             cpuUsage = *(PFLOAT)getUsageText->SortData->UserData * 100;
 
-            if (cpuUsage >= 0.01f)
+            if (cpuUsage >= PhMaxPrecisionLimit)
             {
-                PH_FORMAT format[2];
-
                 // %.2f%%
                 PhInitFormatF(&format[0], cpuUsage, PhMaxPrecisionUnit);
                 PhInitFormatC(&format[1], L'%');
 
-                cpuUsageText = PhFormat(format, RTL_NUMBER_OF(format), 16);
+                cpuUsageText = PhFormat(format, 2, 16);
             }
             else if (cpuUsage != 0)
-                cpuUsageText = PhCreateString(L"< 0.01%");
+            {
+                PhInitFormatS(&format[0], L"< ");
+                PhInitFormatF(&format[1], cpuUsage, PhMaxPrecisionUnit);
+                PhInitFormatC(&format[2], L'%');
+
+                cpuUsageText = PhFormat(format, 3, 16);
+            }
             else
                 cpuUsageText = NULL;
 
@@ -2086,7 +2110,7 @@ int __cdecl PhMipCpuListSectionNodeCompareFunction(
 }
 
 BOOLEAN PhMipCommitListSectionCallback(
-    _In_ struct _PH_MINIINFO_LIST_SECTION *ListSection,
+    _In_ PPH_MINIINFO_LIST_SECTION ListSection,
     _In_ PH_MINIINFO_LIST_SECTION_MESSAGE Message,
     _In_opt_ PVOID Parameter1,
     _In_opt_ PVOID Parameter2
@@ -2096,7 +2120,7 @@ BOOLEAN PhMipCommitListSectionCallback(
     {
     case MiListSectionTick:
         {
-            DOUBLE commitFraction = (DOUBLE)PhPerfInformation.CommittedPages / PhPerfInformation.CommitLimit;
+            FLOAT commitFraction = (FLOAT)PhPerfInformation.CommittedPages / PhPerfInformation.CommitLimit;
             PH_FORMAT format[5];
 
             PhInitFormatS(&format[0], L"Commit    ");
@@ -2195,7 +2219,7 @@ int __cdecl PhMipCommitListSectionNodeCompareFunction(
 }
 
 BOOLEAN PhMipPhysicalListSectionCallback(
-    _In_ struct _PH_MINIINFO_LIST_SECTION *ListSection,
+    _In_ PPH_MINIINFO_LIST_SECTION ListSection,
     _In_ PH_MINIINFO_LIST_SECTION_MESSAGE Message,
     _In_opt_ PVOID Parameter1,
     _In_opt_ PVOID Parameter2
@@ -2205,7 +2229,7 @@ BOOLEAN PhMipPhysicalListSectionCallback(
     {
     case MiListSectionTick:
         {
-            ULONG physicalUsage = PhSystemBasicInformation.NumberOfPhysicalPages - PhPerfInformation.AvailablePages;
+            ULONG_PTR physicalUsage = PhSystemBasicInformation.NumberOfPhysicalPages - PhPerfInformation.AvailablePages;
             FLOAT physicalFraction = (FLOAT)physicalUsage / PhSystemBasicInformation.NumberOfPhysicalPages;
             FLOAT physicalPercent = physicalFraction * 100;
             PH_FORMAT format[5];
@@ -2306,7 +2330,7 @@ int __cdecl PhMipPhysicalListSectionNodeCompareFunction(
 }
 
 BOOLEAN PhMipIoListSectionCallback(
-    _In_ struct _PH_MINIINFO_LIST_SECTION *ListSection,
+    _In_ PPH_MINIINFO_LIST_SECTION ListSection,
     _In_ PH_MINIINFO_LIST_SECTION_MESSAGE Message,
     _In_opt_ PVOID Parameter1,
     _In_opt_ PVOID Parameter2

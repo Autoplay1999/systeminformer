@@ -102,10 +102,6 @@ VOID PhRemoveProcessItemService(
     _In_ PPH_SERVICE_ITEM ServiceItem
     );
 
-VOID PhSubscribeServiceChangeNotifications(
-    _In_ PPH_SERVICE_ITEM ServiceItem
-    );
-
 VOID PhInitializeServiceNonPoll(
     VOID
     );
@@ -253,17 +249,14 @@ PPH_SERVICE_ITEM PhpLookupServiceItem(
 }
 
 PPH_SERVICE_ITEM PhReferenceServiceItem(
-    _In_ PWSTR Name
+    _In_ PPH_STRINGREF Name
     )
 {
     PPH_SERVICE_ITEM serviceItem;
-    PH_STRINGREF key;
-
-    PhInitializeStringRefLongHint(&key, Name);
 
     PhAcquireQueuedLockShared(&PhServiceHashtableLock);
 
-    serviceItem = PhpLookupServiceItem(&key);
+    serviceItem = PhpLookupServiceItem(Name);
 
     if (serviceItem)
         PhReferenceObject(serviceItem);
@@ -720,10 +713,11 @@ VOID PhServiceProviderUpdate(
                 // The SCM doesn't generate notifications for drivers. So flush service
                 // information once in a while so we can detect driver events. (dmex)
                 if (runCount % PhServiceNonPollFlushInterval == 0)
+                {
+                    // Go through the queued services query data.
+                    PhFlushServiceQueryData();
                     goto UpdateStart;
-
-                // Go through the queued services query data.
-                PhFlushServiceQueryData();
+                }
 
                 // Non-poll gate is closed; skip all processing.
                 goto UpdateEnd;
@@ -1045,9 +1039,10 @@ UpdateStart:
     PhFree(services);
 
 UpdateEnd:
-    PhInvokeCallback(PhGetGeneralCallback(GeneralCallbackServiceProviderUpdatedEvent), NULL);
+    PhInvokeCallback(PhGetGeneralCallback(GeneralCallbackServiceProviderUpdatedEvent), UlongToPtr(runCount));
     runCount++;
 }
+
 VOID CALLBACK PhServiceNotifyNonPollCallback(
     _In_ PVOID pParameter
     )

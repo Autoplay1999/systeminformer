@@ -409,7 +409,11 @@ BOOLEAN NTAPI PhpHandleObjectTreeNewCallback(
         return TRUE;
     case TreeNewSortChanged:
         {
-            TreeNew_GetSort(hwnd, &context->TreeNewSortColumn, &context->TreeNewSortOrder);
+            PPH_TREENEW_SORT_CHANGED_EVENT sorting = Parameter1;
+
+            context->TreeNewSortColumn = sorting->SortColumn;
+            context->TreeNewSortOrder = sorting->SortOrder;
+
             // Force a rebuild to sort the items.
             TreeNew_NodesStructured(hwnd);
         }
@@ -423,10 +427,6 @@ BOOLEAN NTAPI PhpHandleObjectTreeNewCallback(
             case 'C':
                 if (GetKeyState(VK_CONTROL) < 0)
                     SendMessage(context->WindowHandle, WM_COMMAND, ID_OBJECT_COPY, 0);
-                break;
-            case 'A':
-                if (GetKeyState(VK_CONTROL) < 0)
-                    TreeNew_SelectRange(context->TreeNewHandle, 0, -1);
                 break;
             case VK_DELETE:
                 SendMessage(context->WindowHandle, WM_COMMAND, ID_OBJECT_CLOSE, 0);
@@ -548,24 +548,21 @@ VOID PhpInitializeHandleObjectTree(
         );
 
     PhSetControlTheme(Context->TreeNewHandle, L"explorer");
-
-    TreeNew_SetCallback(Context->TreeNewHandle, PhpHandleObjectTreeNewCallback, Context);
-
     TreeNew_SetRedraw(Context->TreeNewHandle, FALSE);
+    TreeNew_SetCallback(Context->TreeNewHandle, PhpHandleObjectTreeNewCallback, Context);
 
     // Default columns
     PhAddTreeNewColumn(Context->TreeNewHandle, PH_OBJECT_SEARCH_TREE_COLUMN_PROCESS, TRUE, L"Process", 100, PH_ALIGN_LEFT, 0, 0);
     PhAddTreeNewColumn(Context->TreeNewHandle, PH_OBJECT_SEARCH_TREE_COLUMN_TYPE, TRUE, L"Type", 100, PH_ALIGN_LEFT, 1, 0);
     PhAddTreeNewColumn(Context->TreeNewHandle, PH_OBJECT_SEARCH_TREE_COLUMN_NAME, TRUE, L"Name", 200, PH_ALIGN_LEFT, 2, 0);
     PhAddTreeNewColumn(Context->TreeNewHandle, PH_OBJECT_SEARCH_TREE_COLUMN_HANDLE, TRUE, L"Handle", 80, PH_ALIGN_LEFT, 3, 0);
-
+    // Customizable columns
     PhAddTreeNewColumn(Context->TreeNewHandle, PH_OBJECT_SEARCH_TREE_COLUMN_OBJECTADDRESS, FALSE, L"Object address", 80, PH_ALIGN_LEFT, ULONG_MAX, 0);
     PhAddTreeNewColumn(Context->TreeNewHandle, PH_OBJECT_SEARCH_TREE_COLUMN_ORIGINALNAME, FALSE, L"Original name", 200, PH_ALIGN_LEFT, ULONG_MAX, 0);
     PhAddTreeNewColumn(Context->TreeNewHandle, PH_OBJECT_SEARCH_TREE_COLUMN_GRANTEDACCESS, FALSE, L"Granted access", 200, PH_ALIGN_LEFT, ULONG_MAX, 0);
 
-    TreeNew_SetRedraw(Context->TreeNewHandle, TRUE);
-
     TreeNew_SetTriState(Context->TreeNewHandle, TRUE);
+    TreeNew_SetRedraw(Context->TreeNewHandle, TRUE);
 
     PhpHandleObjectLoadSettingsTreeList(Context);
 }
@@ -922,7 +919,7 @@ static BOOLEAN NTAPI EnumModulesCallback(
          PhSearchControlMatchPointer(context->SearchMatchHandle, Module->BaseAddress))
     {
         PPHP_OBJECT_SEARCH_RESULT searchResult;
-        PWSTR typeName;
+        PCWSTR typeName;
 
         switch (Module->Type)
         {
@@ -1582,9 +1579,13 @@ INT_PTR CALLBACK PhpFindObjectsDlgProc(
 
                         if (processNode = PhFindProcessNode(handleObjectNode->ProcessId))
                         {
-                            ProcessHacker_SelectTabPage(0);
-                            ProcessHacker_SelectProcessNode(processNode);
-                            ProcessHacker_ToggleVisible(TRUE);
+                            SystemInformer_SelectTabPage(0);
+                            SystemInformer_SelectProcessNode(processNode);
+                            SystemInformer_ToggleVisible(TRUE);
+                        }
+                        else
+                        {
+                            PhShowStatus(hwndDlg, L"The process does not exist.", STATUS_INVALID_CID, 0);
                         }
                     }
                 }

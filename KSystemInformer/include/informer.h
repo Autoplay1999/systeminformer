@@ -5,7 +5,7 @@
  *
  * Authors:
  *
- *     jxy-s   2022-2023
+ *     jxy-s   2022-2024
  *
  */
 
@@ -14,10 +14,10 @@
 #include <kphmsg.h>
 
 #ifdef KPH_INFORMER_P
-#define KPH_DEFINE_INFORMER_SETTING(name)                                     \
-    const KPH_INFORMER_SETTINGS KphInformer##name = { .##name = TRUE }
+#define KPH_DEFINE_INFORMER_SETTING(name)                                      \
+    const KPH_INFORMER_SETTINGS KphInformer##name = { .name = TRUE }
 #else
-#define KPH_DEFINE_INFORMER_SETTING(name)                                     \
+#define KPH_DEFINE_INFORMER_SETTING(name)                                      \
     extern const KPH_INFORMER_SETTINGS KphInformer##name
 #endif
 
@@ -189,6 +189,7 @@ KPH_DEFINE_INFORMER_SETTING(RegPreQueryKeyName);
 KPH_DEFINE_INFORMER_SETTING(RegPostQueryKeyName);
 KPH_DEFINE_INFORMER_SETTING(RegPreSaveMergedKey);
 KPH_DEFINE_INFORMER_SETTING(RegPostSaveMergedKey);
+KPH_DEFINE_INFORMER_SETTING(ImageVerify);
 
 #ifdef KPH_INFORMER_P
 KPH_PROTECTED_DATA_SECTION_RO_POP();

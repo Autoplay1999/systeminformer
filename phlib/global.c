@@ -30,15 +30,15 @@ BOOLEAN PhInitializeProcessorInformation(
     );
 
 PVOID PhInstanceHandle = NULL;
-PWSTR PhApplicationName = NULL;
+PCWSTR PhApplicationName = NULL;
 PVOID PhHeapHandle = NULL;
 RTL_OSVERSIONINFOEXW PhOsVersion = { 0 };
 PHLIBAPI PH_SYSTEM_BASIC_INFORMATION PhSystemBasicInformation = { 0 };
 PH_SYSTEM_PROCESSOR_INFORMATION PhSystemProcessorInformation = { 0 };
 ULONG WindowsVersion = WINDOWS_NEW;
 static WCHAR WindowsVersionStringBuffer[40] = { L'0', L'.', L'0', L'.', L'0', UNICODE_NULL };
-PWSTR WindowsVersionString = WindowsVersionStringBuffer;
-PWSTR WindowsVersionName = L"Windows";
+PCWSTR WindowsVersionString = WindowsVersionStringBuffer;
+PCWSTR WindowsVersionName = L"Windows";
 
 // Internal data
 #ifdef DEBUG
@@ -46,7 +46,7 @@ PHLIB_STATISTICS_BLOCK PhLibStatisticsBlock;
 #endif
 
 NTSTATUS PhInitializePhLib(
-    _In_ PWSTR ApplicationName,
+    _In_ PCWSTR ApplicationName,
     _In_ PVOID ImageBaseAddress
     )
 {
@@ -78,14 +78,13 @@ BOOLEAN PhIsExecutingInWow64(
     )
 {
 #ifndef _WIN64
-    static BOOLEAN valid = FALSE;
+    static volatile BOOLEAN valid = FALSE;
     static BOOLEAN isWow64 = FALSE;
 
-    if (!valid)
+    if (!ReadBooleanAcquire(&valid))
     {
         PhGetProcessIsWow64(NtCurrentProcess(), &isWow64);
-        MemoryBarrier();
-        valid = TRUE;
+        WriteBooleanRelease(&valid, TRUE);
     }
 
     return isWow64;
@@ -98,24 +97,21 @@ VOID PhInitializeSystemInformation(
     VOID
     )
 {
-    SYSTEM_BASIC_INFORMATION basicInfo;
+    SYSTEM_BASIC_INFORMATION basicInfo = { 0 };
 
-    memset(&basicInfo, 0, sizeof(SYSTEM_BASIC_INFORMATION));
+    PhSystemBasicInformation.PageSize = PAGE_SIZE;
+    PhSystemBasicInformation.NumberOfProcessors = 1;
+    PhSystemBasicInformation.NumberOfPhysicalPages = ULONG_MAX;
+    PhSystemBasicInformation.AllocationGranularity = 0x10000;
+    PhSystemBasicInformation.MaximumUserModeAddress = 0x10000;
+    PhSystemBasicInformation.ActiveProcessorsAffinityMask = USHRT_MAX;
 
-    if (!NT_SUCCESS(NtQuerySystemInformation(
+    NtQuerySystemInformation(
         SystemBasicInformation,
         &basicInfo,
         sizeof(SYSTEM_BASIC_INFORMATION),
         NULL
-        )))
-    {
-        basicInfo.PageSize = PAGE_SIZE;
-        basicInfo.NumberOfProcessors = 1;
-        basicInfo.NumberOfPhysicalPages = ULONG_MAX;
-        basicInfo.AllocationGranularity = 0x10000;
-        basicInfo.MaximumUserModeAddress = 0x10000;
-        basicInfo.ActiveProcessorsAffinityMask = USHRT_MAX;
-    }
+        );
 
     PhSystemBasicInformation.PageSize = (USHORT)basicInfo.PageSize;
     PhSystemBasicInformation.NumberOfProcessors = (USHORT)basicInfo.NumberOfProcessors;

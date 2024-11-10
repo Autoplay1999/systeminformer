@@ -5,7 +5,7 @@
  *
  * Authors:
  *
- *     jxy-s   2023
+ *     jxy-s   2023-2024
  *
  */
 
@@ -183,6 +183,7 @@ const KPH_INFORMER_MAP_ENTRY KphpInformerMap[] =
     KPH_INFORMER_MAP_SETTING(RegPostQueryKeyName),
     KPH_INFORMER_MAP_SETTING(RegPreSaveMergedKey),
     KPH_INFORMER_MAP_SETTING(RegPostSaveMergedKey),
+    KPH_INFORMER_MAP_SETTING(ImageVerify),
 };
 C_ASSERT((ARRAYSIZE(KphpInformerMap) + (MaxKphMsgClientAllowed + 1)) == MaxKphMsg);
 KPH_PROTECTED_DATA_SECTION_RO_POP();
@@ -217,7 +218,7 @@ BOOLEAN KphpInformerProcessIsFiltered(
     _In_ PKPH_PROCESS_CONTEXT Process
     )
 {
-    NPAGED_CODE_APC_MAX_FOR_PAGING_IO();
+    KPH_NPAGED_CODE_APC_MAX_FOR_PAGING_IO();
 
     return KphCheckInformerSettings(&Process->InformerFilter, Settings);
 }
@@ -237,7 +238,7 @@ BOOLEAN KphInformerIsEnabled(
     _In_opt_ PKPH_PROCESS_CONTEXT Process
     )
 {
-    NPAGED_CODE_APC_MAX_FOR_PAGING_IO();
+    KPH_NPAGED_CODE_APC_MAX_FOR_PAGING_IO();
 
     if (!KphCommsInformerEnabled(Settings))
     {
@@ -269,7 +270,7 @@ BOOLEAN KphInformerIsEnabled2(
     _In_opt_ PKPH_PROCESS_CONTEXT TargetProcess
     )
 {
-    NPAGED_CODE_APC_MAX_FOR_PAGING_IO();
+    KPH_NPAGED_CODE_APC_MAX_FOR_PAGING_IO();
 
     if (!KphCommsInformerEnabled(Settings))
     {
@@ -285,7 +286,7 @@ BOOLEAN KphInformerIsEnabled2(
     return TRUE;
 }
 
-PAGED_FILE();
+KPH_PAGED_FILE();
 
 /**
  * \brief Gets informer filtering for a process.
@@ -308,7 +309,7 @@ NTSTATUS KphGetInformerProcessFilter(
     PEPROCESS processObject;
     PKPH_PROCESS_CONTEXT processContext;
 
-    PAGED_CODE_PASSIVE();
+    KPH_PAGED_CODE_PASSIVE();
 
     processObject = NULL;
     processContext = NULL;
@@ -410,7 +411,7 @@ BOOLEAN KSIAPI KphpSetInformerProcessFilter(
 {
     PKPH_INFORMER_SETTINGS filter;
 
-    PAGED_CODE_PASSIVE();
+    KPH_PAGED_CODE_PASSIVE();
 
     NT_ASSERT(Parameter);
 
@@ -431,7 +432,7 @@ VOID KphpSetInformerProcessFilterAll(
     _In_ PKPH_INFORMER_SETTINGS Filter
     )
 {
-    PAGED_CODE_PASSIVE();
+    KPH_PAGED_CODE_PASSIVE();
 
     KphSetInformerSettings(&KphDefaultInformerProcessFilter, Filter);
 
@@ -460,7 +461,7 @@ NTSTATUS KphSetInformerProcessFilter(
     PKPH_PROCESS_CONTEXT processContext;
     KPH_INFORMER_SETTINGS filter;
 
-    PAGED_CODE_PASSIVE();
+    KPH_PAGED_CODE_PASSIVE();
 
     processObject = NULL;
     processContext = NULL;

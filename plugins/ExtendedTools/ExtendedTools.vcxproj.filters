@@ -177,6 +177,9 @@
     <ClCompile Include="npusys.c">
       <Filter>Source Files\Neural</Filter>
     </ClCompile>
+    <ClCompile Include="tpm_editor.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -259,10 +262,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="CHANGELOG.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ResourceCompile Include="ExtendedTools.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="version.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

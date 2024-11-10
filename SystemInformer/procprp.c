@@ -313,7 +313,7 @@ LRESULT CALLBACK PhpPropSheetWndProc(
             {
                 if (wParam == VK_F5)
                 {
-                    ProcessHacker_Refresh();
+                    SystemInformer_Refresh();
                 }
             }
         }
@@ -325,6 +325,24 @@ LRESULT CALLBACK PhpPropSheetWndProc(
             if (id == 2000)
             {
                 PhpFlushProcessPropSheetWaitContextData();
+            }
+        }
+        break;
+    case PSM_ISDIALOGMESSAGE:
+        {
+            MSG* msg = (MSG*)lParam;
+            if (msg->message == WM_KEYDOWN)
+            {
+                switch (msg->wParam)
+                {
+                case VK_F5:
+                    SystemInformer_Refresh();
+                    break;
+                case VK_F6:
+                case VK_PAUSE:
+                    SystemInformer_SetUpdateAutomatically(!SystemInformer_GetUpdateAutomatically());
+                    break;
+                }
             }
         }
         break;
@@ -566,7 +584,7 @@ VOID PhpCreateProcessPropSheetWaitContext(
         PhpProcessPropertiesWaitCallback,
         waitContext,
         INFINITE,
-        WT_EXECUTEONLYONCE | WT_EXECUTEINWAITTHREAD
+        WT_EXECUTEONLYONCE | WT_EXECUTEINWAITTHREAD | WT_EXECUTELONGFUNCTION
         )))
     {
         PropContext->ProcessWaitContext = waitContext;
@@ -587,7 +605,7 @@ VOID PhpFlushProcessPropSheetWaitContextData(
     VOID
     )
 {
-    PSLIST_ENTRY entry;
+    PSLIST_ENTRY entry = NULL;
     PPH_PROCESS_WAITPROPCONTEXT data;
     PROCESS_BASIC_INFORMATION basicInfo;
 

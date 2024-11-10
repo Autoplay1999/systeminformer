@@ -1086,7 +1086,7 @@ NTSTATUS PhSvcApiSetTcpEntry(
     } tcpRow;
     ULONG result;
 
-    localSetTcpEntry = InterlockedCompareExchangePointer(&setTcpEntry, NULL, NULL);
+    localSetTcpEntry = ReadPointerAcquire(&setTcpEntry);
 
     if (!localSetTcpEntry)
     {
@@ -1393,7 +1393,7 @@ NTSTATUS PhSvcApiWriteMiniDumpProcess(
     HRESULT status = E_UNEXPECTED;
     HANDLE snapshotHandle = NULL;
 
-    if (NT_SUCCESS(PhCreateProcessSnapshot(&snapshotHandle, processHandle, NULL)))
+    if (NT_SUCCESS(PhCreateProcessSnapshot(&snapshotHandle, processHandle)))
     {
         processDumpType =
             MiniDumpWithFullMemory |

@@ -22,9 +22,7 @@
 #include <verify.h>
 #include <mapimg.h>
 #include <mapldr.h>
-
-#include "../tools/thirdparty/winsdk/dia2.h"
-#include "../tools/thirdparty/winsdk/dia3.h"
+#include <thirdparty.h>
 
 #if defined(_ARM64_)
 #define PH_THREAD_STACK_NATIVE_MACHINE IMAGE_FILE_MACHINE_ARM64
@@ -253,7 +251,7 @@ static VOID PhpSymbolProviderEventCallback(
         {
             PH_STRINGREF xmlStringRef;
 
-            PhInitializeStringRefLongHint(&xmlStringRef, (PWSTR)CallbackData);
+            PhInitializeStringRefLongHint(&xmlStringRef, (PCWSTR)CallbackData);
 
             if (PhStartsWithStringRef2(&xmlStringRef, L"<Progress percent", TRUE))
             {
@@ -1028,7 +1026,7 @@ CleanupExit:
 _Success_(return)
 BOOLEAN PhGetSymbolFromName(
     _In_ PPH_SYMBOL_PROVIDER SymbolProvider,
-    _In_ PWSTR Name,
+    _In_ PCWSTR Name,
     _Out_ PPH_SYMBOL_INFORMATION Information
     )
 {
@@ -1435,7 +1433,7 @@ VOID PhSetOptionsSymbolProvider(
 
 VOID PhSetSearchPathSymbolProvider(
     _In_ PPH_SYMBOL_PROVIDER SymbolProvider,
-    _In_ PWSTR Path
+    _In_ PCWSTR Path
     )
 {
     PhpRegisterSymbolProvider(SymbolProvider);
@@ -2522,7 +2520,7 @@ ResumeExit:
 
 PPH_STRING PhUndecorateSymbolName(
     _In_ PPH_SYMBOL_PROVIDER SymbolProvider,
-    _In_ PWSTR DecoratedName
+    _In_ PCWSTR DecoratedName
     )
 {
     PPH_STRING undecoratedSymbolName = NULL;
@@ -2731,7 +2729,7 @@ BOOLEAN PhGetSymbolProviderDiaSession(
 }
 
 VOID PhSymbolProviderFreeDiaString(
-    _In_ PWSTR DiaString
+    _In_ PCWSTR DiaString
     )
 {
     if ((SymGetDiaSession_I || SymGetDiaSource_I) && !SymFreeDiaString_I)

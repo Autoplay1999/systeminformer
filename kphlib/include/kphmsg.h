@@ -226,6 +226,7 @@ typedef enum _KPH_MESSAGE_ID
     KphMsgRegPostQueryKeyName,
     KphMsgRegPreSaveMergedKey,
     KphMsgRegPostSaveMergedKey,
+    KphMsgImageVerify,
 
     MaxKphMsg,
 
@@ -255,6 +256,11 @@ typedef enum _KPH_MESSAGE_FIELD_ID
     KphMsgFieldNewName,
     KphMsgFieldClass,
     KphMsgFieldOtherObjectName,
+    KphMsgFieldHash,
+    KphMsgFieldRegistryPath,
+    KphMsgFieldCertificatePublisher,
+    KphMsgFieldCertificateIssuer,
+    KphMsgFieldCertificateThumbprint,
 
     MaxKphMsgField
 } KPH_MESSAGE_FIELD_ID, *PKPH_MESSAGE_FIELD_ID;
@@ -364,6 +370,7 @@ typedef struct _KPH_MESSAGE
             KPHM_REQUIRED_STATE_FAILURE RequiredStateFailure;
             KPHM_FILE File;
             KPHM_REGISTRY Reg;
+            KPHM_IMAGE_VERIFY ImageVerify;
         } Kernel;
 
         //
@@ -399,19 +406,11 @@ typedef const KPH_MESSAGE* PCKPH_MESSAGE;
 //
 C_ASSERT(sizeof(KPH_MESSAGE) <= 0xffff);
 #ifdef _WIN64
-#if (PHNT_VERSION >= PHNT_WIN8)
 C_ASSERT(sizeof(KPH_MESSAGE) == 0x1000);
 C_ASSERT(FIELD_OFFSET(KPH_MESSAGE, _Dyn) == 256);
 C_ASSERT(FIELD_OFFSET(KPH_MESSAGE, _Dyn.Buffer) == 356);
 C_ASSERT(KPH_MESSAGE_MIN_SIZE == 356);
 C_ASSERT(KPH_MESSAGE_MIN_SIZE == FIELD_OFFSET(KPH_MESSAGE, _Dyn.Buffer));
-#else
-C_ASSERT(sizeof(KPH_MESSAGE) == 0xFE0);
-C_ASSERT(FIELD_OFFSET(KPH_MESSAGE, _Dyn) == 224);
-C_ASSERT(FIELD_OFFSET(KPH_MESSAGE, _Dyn.Buffer) == 324);
-C_ASSERT(KPH_MESSAGE_MIN_SIZE == 324);
-C_ASSERT(KPH_MESSAGE_MIN_SIZE == FIELD_OFFSET(KPH_MESSAGE, _Dyn.Buffer));
-#endif
 #else
 // not supported
 #endif

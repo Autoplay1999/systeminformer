@@ -68,6 +68,18 @@ typedef struct _LARGE_INTEGER_128
     LONGLONG QuadPart[2];
 } LARGE_INTEGER_128, *PLARGE_INTEGER_128;
 
+// Limits
+
+#define MINCHAR     0x80        // winnt
+#define MAXCHAR     0x7f        // winnt
+#define MINSHORT    0x8000      // winnt
+#define MAXSHORT    0x7fff      // winnt
+#define MINLONG     0x80000000  // winnt
+#define MAXLONG     0x7fffffff  // winnt
+#define MAXUCHAR    0xff        // winnt
+#define MAXUSHORT   0xffff      // winnt
+#define MAXULONG    0xffffffff  // winnt
+
 // NT status macros
 
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
@@ -141,7 +153,7 @@ typedef struct _UNICODE_STRING
 
 typedef const UNICODE_STRING *PCUNICODE_STRING;
 
-#define RTL_CONSTANT_STRING(s) { sizeof(s) - sizeof((s)[0]), sizeof(s), s }
+#define RTL_CONSTANT_STRING(s) { sizeof((s)) - sizeof((s)[0]), sizeof((s)), (PWCH)(s) }
 
 #define DECLARE_CONST_UNICODE_STRING(_var, _str) \
 const WCHAR _var ## _buffer[] = _str; \
@@ -228,7 +240,7 @@ typedef struct _OBJECT_ATTRIBUTES
 {
     ULONG Length;
     HANDLE RootDirectory;
-    PUNICODE_STRING ObjectName;
+    PCUNICODE_STRING ObjectName;
     ULONG Attributes;
     PVOID SecurityDescriptor; // PSECURITY_DESCRIPTOR;
     PVOID SecurityQualityOfService; // PSECURITY_QUALITY_OF_SERVICE

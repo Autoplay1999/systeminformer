@@ -3,7 +3,7 @@
  *
  * Authors:
  *
- *     jxy-s   2022-2023
+ *     jxy-s   2022-2024
  *
  */
 
@@ -401,6 +401,8 @@ typedef struct _REG_SAVE_MERGED_KEY_INFORMATION
 
 #define VS_FFI_SIGNATURE        0xFEEF04BDL
 
+typedef struct _IMAGE_RESOURCE_DATA_ENTRY IMAGE_RESOURCE_DATA_ENTRY, *PIMAGE_RESOURCE_DATA_ENTRY;
+
 NTKERNELAPI
 NTSTATUS
 NTAPI
@@ -457,6 +459,8 @@ typedef struct _FIXEDFILEINFO
     DWORD   dwFileDateMS;
     DWORD   dwFileDateLS;
 } VS_FIXEDFILEINFO, *PVS_FIXEDFILEINFO;
+
+typedef struct _NON_PAGED_DEBUG_INFO NON_PAGED_DEBUG_INFO, *PNON_PAGED_DEBUG_INFO;
 
 typedef struct _KLDR_DATA_TABLE_ENTRY
 {
@@ -771,6 +775,27 @@ PS_GET_PROCESS_START_KEY(
     _In_ PEPROCESS Process
     );
 typedef PS_GET_PROCESS_START_KEY* PPS_GET_PROCESS_START_KEY;
+
+typedef struct _PROCESS_TELEMETRY_ID_INFORMATION
+{
+    ULONG HeaderSize;
+    ULONG ProcessId;
+    ULONGLONG ProcessStartKey;
+    ULONGLONG CreateTime;
+    ULONGLONG CreateInterruptTime;
+    ULONGLONG CreateUnbiasedInterruptTime;
+    ULONGLONG ProcessSequenceNumber;
+    ULONGLONG SessionCreateTime;
+    ULONG SessionId;
+    ULONG BootId;
+    ULONG ImageChecksum;
+    ULONG ImageTimeDateStamp;
+    ULONG UserSidOffset;
+    ULONG ImagePathOffset;
+    ULONG PackageNameOffset;
+    ULONG RelativeAppNameOffset;
+    ULONG CommandLineOffset;
+} PROCESS_TELEMETRY_ID_INFORMATION, *PPROCESS_TELEMETRY_ID_INFORMATION;
 
 // RTL
 
@@ -1786,6 +1811,31 @@ SeGetCachedSigningLevel(
     _Out_opt_ PULONG ThumbprintAlgorithm
     );
 #endif
+
+typedef
+_IRQL_requires_max_(PASSIVE_LEVEL)
+_Function_class_(SE_REGISTER_IMAGE_VERIFICATION_CALLBACK)
+NTKERNELAPI
+NTSTATUS
+SE_REGISTER_IMAGE_VERIFICATION_CALLBACK(
+    _In_ SE_IMAGE_TYPE ImageType,
+    _In_ SE_IMAGE_VERIFICATION_CALLBACK_TYPE CallbackType,
+    _In_ PSE_IMAGE_VERIFICATION_CALLBACK_FUNCTION CallbackFunction,
+    _In_opt_ PVOID CallbackContext,
+    _Reserved_ SE_IMAGE_VERIFICATION_CALLBACK_TOKEN Token,
+    _Out_ PVOID* CallbackHandle
+    );
+typedef SE_REGISTER_IMAGE_VERIFICATION_CALLBACK* PSE_REGISTER_IMAGE_VERIFICATION_CALLBACK;
+
+typedef
+_IRQL_requires_max_(PASSIVE_LEVEL)
+_Function_class_(SE_UNREGISTER_IMAGE_VERIFICATION_CALLBACK)
+NTKERNELAPI
+VOID
+SE_UNREGISTER_IMAGE_VERIFICATION_CALLBACK(
+    _In_ PVOID CallbackHandle
+    );
+typedef SE_UNREGISTER_IMAGE_VERIFICATION_CALLBACK* PSE_UNREGISTER_IMAGE_VERIFICATION_CALLBACK;
 
 // schannel.h
 

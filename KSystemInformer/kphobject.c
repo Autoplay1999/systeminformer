@@ -5,7 +5,7 @@
  *
  * Authors:
  *
- *     jxy-s   2022-2023
+ *     jxy-s   2022-2024
  *
  */
 
@@ -517,7 +517,7 @@ PVOID KphAtomicMoveObjectReference(
     return KphpAtomicStoreObjectReference(ObjectRef, Object);
 }
 
-PAGED_FILE();
+KPH_PAGED_FILE();
 
 /**
  * \brief Worker routine for deleting objects in a deferred manner.
@@ -533,7 +533,7 @@ VOID KSIAPI KphpDeferDeleteObjectWorker(
 {
     PSLIST_ENTRY entry;
 
-    PAGED_CODE_PASSIVE();
+    KPH_PAGED_CODE_PASSIVE();
 
     UNREFERENCED_PARAMETER(Parameter);
 
@@ -561,7 +561,7 @@ VOID KphObjectInitialize(
     VOID
     )
 {
-    PAGED_CODE_PASSIVE();
+    KPH_PAGED_CODE_PASSIVE();
 
     InitializeSListHead(&KphpDeferDeleteObjectList);
     KsiInitializeWorkItem(&KphpDeferDeleteObjectWorkItem,

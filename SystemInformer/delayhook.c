@@ -12,12 +12,11 @@
 #include <phapp.h>
 #include <apiimport.h>
 #include <mapldr.h>
-
+#include <thirdparty.h>
 #include <vsstyle.h>
 #include <uxtheme.h>
 
 #include "settings.h"
-#include "../tools/thirdparty/detours/detours.h"
 
 // https://learn.microsoft.com/en-us/windows/win32/winmsg/about-window-procedures#window-procedure-superclassing
 static WNDPROC PhDefaultMenuWindowProcedure = NULL;
@@ -149,7 +148,7 @@ LRESULT CALLBACK PhRebarWindowHookProcedure(
             SetBkMode(hdc, TRANSPARENT);
             SetTextColor(hdc, PhThemeWindowTextColor);
             SetDCBrushColor(hdc, PhThemeWindowBackground2Color);
-            return (INT_PTR)GetStockBrush(DC_BRUSH);
+            return (INT_PTR)PhGetStockBrush(DC_BRUSH);
         }
         break;
     }
@@ -327,14 +326,14 @@ VOID ThemeWindowStatusBarDestroyBufferedContext(
     }
 }
 
-INT ThemeWindowStatusBarUpdateRectToIndex(
+LONG ThemeWindowStatusBarUpdateRectToIndex(
     _In_ HWND WindowHandle,
     _In_ WNDPROC WindowProcedure,
     _In_ PRECT UpdateRect,
-    _In_ INT Count
+    _In_ LONG Count
     )
 {
-    for (INT i = 0; i < Count; i++)
+    for (LONG i = 0; i < Count; i++)
     {
         RECT blockRect = { 0 };
 
@@ -360,7 +359,7 @@ VOID ThemeWindowStatusBarDrawPart(
     _In_ HWND WindowHandle,
     _In_ HDC bufferDc,
     _In_ PRECT clientRect,
-    _In_ INT Index
+    _In_ LONG Index
     )
 {
     RECT blockRect = { 0 };
@@ -379,7 +378,7 @@ VOID ThemeWindowStatusBarDrawPart(
     {
         SetTextColor(bufferDc, RGB(0xff, 0xff, 0xff));
         SetDCBrushColor(bufferDc, PhThemeWindowHighlightColor);
-        FillRect(bufferDc, &blockRect, GetStockBrush(DC_BRUSH));
+        FillRect(bufferDc, &blockRect, PhGetStockBrush(DC_BRUSH));
         //FrameRect(bufferDc, &blockRect, GetSysColorBrush(COLOR_HIGHLIGHT));
     }
     else
@@ -412,7 +411,7 @@ VOID ThemeWindowRenderStatusBar(
 
     FillRect(bufferDc, clientRect, PhThemeWindowBackgroundBrush);
 
-    INT blockCount = (INT)CallWindowProc(
+    LONG blockCount = (LONG)CallWindowProc(
         PhDefaultStatusbarWindowProcedure,
         WindowHandle,
         SB_GETPARTS,
@@ -449,7 +448,7 @@ VOID ThemeWindowRenderStatusBar(
             DrawFrameControl(bufferDc, &sizeGripRect, DFC_SCROLL, DFCS_SCROLLSIZEGRIP);
         }
 
-        for (INT i = 0; i < blockCount; i++)
+        for (LONG i = 0; i < blockCount; i++)
         {
             ThemeWindowStatusBarDrawPart(Context, WindowHandle, bufferDc, clientRect, i);
         }
@@ -649,12 +648,12 @@ LRESULT CALLBACK PhEditWindowHookProcedure(
                 if (GetFocus() == WindowHandle)
                 {
                     SetDCBrushColor(hdc, GetSysColor(COLOR_HOTLIGHT)); // PhThemeWindowHighlightColor
-                    FrameRect(hdc, &windowRect, GetStockBrush(DC_BRUSH));
+                    FrameRect(hdc, &windowRect, PhGetStockBrush(DC_BRUSH));
                 }
                 else
                 {
                     SetDCBrushColor(hdc, PhThemeWindowBackground2Color);
-                    FrameRect(hdc, &windowRect, GetStockBrush(DC_BRUSH));
+                    FrameRect(hdc, &windowRect, PhGetStockBrush(DC_BRUSH));
                 }
 
                 ReleaseDC(WindowHandle, hdc);
@@ -714,7 +713,7 @@ VOID ThemeWindowRenderHeaderControl(
         {
             SetTextColor(bufferDc, PhThemeWindowTextColor);
             SetDCBrushColor(bufferDc, PhThemeWindowBackground2Color); // PhThemeWindowHighlightColor);
-            FillRect(bufferDc, &headerRect, GetStockBrush(DC_BRUSH));
+            FillRect(bufferDc, &headerRect, PhGetStockBrush(DC_BRUSH));
             //FrameRect(bufferDc, &headerRect, GetSysColorBrush(COLOR_HIGHLIGHT));
         }
         else
@@ -733,7 +732,7 @@ VOID ThemeWindowRenderHeaderControl(
             //frameRect.right = headerRect.right;
             //frameRect.top = headerRect.top;
             //SetDCBrushColor(hdc, RGB(68, 68, 68)); // RGB(0x77, 0x77, 0x77));
-            //FrameRect(hdc, &headerRect, GetStockBrush(DC_BRUSH));
+            //FrameRect(hdc, &headerRect, PhGetStockBrush(DC_BRUSH));
 
             //PatBlt(DrawInfo->hDC, DrawInfo->rcItem.right - 1, DrawInfo->rcItem.top, 1, DrawInfo->rcItem.bottom - DrawInfo->rcItem.top, PATCOPY);
             //PatBlt(DrawInfo->hDC, DrawInfo->rcItem.left, DrawInfo->rcItem.bottom - 1, DrawInfo->rcItem.right - DrawInfo->rcItem.left, 1, PATCOPY);
@@ -776,7 +775,7 @@ VOID ThemeWindowRenderHeaderControl(
                     NULL,
                     TS_TRUE,
                     &sortArrowSize
-                    ) == S_OK)
+                    ))
                 {
                     sortArrowRect.bottom = sortArrowSize.cy;
                 }
@@ -806,7 +805,7 @@ VOID ThemeWindowRenderHeaderControl(
                     NULL,
                     TS_TRUE,
                     &sortArrowSize
-                    ) == S_OK)
+                    ))
                 {
                     sortArrowRect.bottom = sortArrowSize.cy;
                 }
@@ -1225,8 +1224,8 @@ static HWND (WINAPI* PhDefaultCreateWindowEx)(
 HRESULT PhDrawThemeBackgroundHook(
     _In_ HTHEME Theme,
     _In_ HDC Hdc,
-    _In_ INT PartId,
-    _In_ INT StateId,
+    _In_ LONG PartId,
+    _In_ LONG StateId,
     _In_ LPCRECT Rect,
     _In_ LPCRECT ClipRect
     )
@@ -1272,14 +1271,14 @@ HRESULT PhDrawThemeBackgroundHook(
 //    if (PartId == TDLG_PRIMARYPANEL && StateId == 0)
 //    {
 //        SetDCBrushColor(hdc, RGB(65, 65, 65));
-//        FillRect(hdc, Rect, GetStockBrush(DC_BRUSH));
+//        FillRect(hdc, Rect, PhGetStockBrush(DC_BRUSH));
 //        return S_OK;
 //    }
 //
 //    if (PartId == TDLG_SECONDARYPANEL && StateId == 0)
 //    {
 //        SetDCBrushColor(hdc, RGB(45, 45, 45));
-//        FillRect(hdc, Rect, GetStockBrush(DC_BRUSH));
+//        FillRect(hdc, Rect, PhGetStockBrush(DC_BRUSH));
 //        return S_OK;
 //    }
 //
@@ -1292,10 +1291,10 @@ HWND PhCreateWindowExHook(
     _In_opt_ PCWSTR ClassName,
     _In_opt_ PCWSTR WindowName,
     _In_ ULONG Style,
-    _In_ INT X,
-    _In_ INT Y,
-    _In_ INT Width,
-    _In_ INT Height,
+    _In_ LONG X,
+    _In_ LONG Y,
+    _In_ LONG Width,
+    _In_ LONG Height,
     _In_opt_ HWND Parent,
     _In_opt_ HMENU Menu,
     _In_opt_ PVOID Instance,

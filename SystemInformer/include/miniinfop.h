@@ -177,7 +177,7 @@ PPH_MINIINFO_SECTION PhMipFindSection(
     );
 
 PPH_MINIINFO_SECTION PhMipCreateInternalSection(
-    _In_ PWSTR Name,
+    _In_ PCWSTR Name,
     _In_ ULONG Flags,
     _In_ PPH_MINIINFO_SECTION_CALLBACK Callback
     );
@@ -263,13 +263,13 @@ typedef struct _PH_MIP_GROUP_NODE
 } PH_MIP_GROUP_NODE, *PPH_MIP_GROUP_NODE;
 
 PPH_MINIINFO_LIST_SECTION PhMipCreateListSection(
-    _In_ PWSTR Name,
+    _In_ PCWSTR Name,
     _In_ ULONG Flags,
     _In_ PPH_MINIINFO_LIST_SECTION Template
     );
 
 PPH_MINIINFO_LIST_SECTION PhMipCreateInternalListSection(
-    _In_ PWSTR Name,
+    _In_ PCWSTR Name,
     _In_ ULONG Flags,
     _In_ PPH_MINIINFO_LIST_SECTION_CALLBACK Callback
     );
@@ -277,8 +277,8 @@ PPH_MINIINFO_LIST_SECTION PhMipCreateInternalListSection(
 BOOLEAN PhMipListSectionCallback(
     _In_ PPH_MINIINFO_SECTION Section,
     _In_ PH_MINIINFO_SECTION_MESSAGE Message,
-    _In_opt_ PVOID Parameter1,
-    _In_opt_ PVOID Parameter2
+    _In_ PVOID Parameter1,
+    _In_ PVOID Parameter2
     );
 
 INT_PTR CALLBACK PhMipListSectionDialogProc(
@@ -345,7 +345,7 @@ VOID PhMipHandleListSectionCommand(
 // CPU section
 
 BOOLEAN PhMipCpuListSectionCallback(
-    _In_ struct _PH_MINIINFO_LIST_SECTION *ListSection,
+    _In_ PPH_MINIINFO_LIST_SECTION ListSection,
     _In_ PH_MINIINFO_LIST_SECTION_MESSAGE Message,
     _In_opt_ PVOID Parameter1,
     _In_opt_ PVOID Parameter2
@@ -364,7 +364,7 @@ int __cdecl PhMipCpuListSectionNodeCompareFunction(
 // Commit charge section
 
 BOOLEAN PhMipCommitListSectionCallback(
-    _In_ struct _PH_MINIINFO_LIST_SECTION *ListSection,
+    _In_ PPH_MINIINFO_LIST_SECTION ListSection,
     _In_ PH_MINIINFO_LIST_SECTION_MESSAGE Message,
     _In_opt_ PVOID Parameter1,
     _In_opt_ PVOID Parameter2
@@ -383,7 +383,7 @@ int __cdecl PhMipCommitListSectionNodeCompareFunction(
 // Physical memory section
 
 BOOLEAN PhMipPhysicalListSectionCallback(
-    _In_ struct _PH_MINIINFO_LIST_SECTION *ListSection,
+    _In_ PPH_MINIINFO_LIST_SECTION ListSection,
     _In_ PH_MINIINFO_LIST_SECTION_MESSAGE Message,
     _In_opt_ PVOID Parameter1,
     _In_opt_ PVOID Parameter2
@@ -402,7 +402,7 @@ int __cdecl PhMipPhysicalListSectionNodeCompareFunction(
 // I/O section
 
 BOOLEAN PhMipIoListSectionCallback(
-    _In_ struct _PH_MINIINFO_LIST_SECTION *ListSection,
+    _In_ PPH_MINIINFO_LIST_SECTION ListSection,
     _In_ PH_MINIINFO_LIST_SECTION_MESSAGE Message,
     _In_opt_ PVOID Parameter1,
     _In_opt_ PVOID Parameter2

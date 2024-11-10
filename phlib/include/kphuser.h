@@ -45,7 +45,7 @@ typedef struct _KPH_CONFIG_PARAMETERS
 } KPH_CONFIG_PARAMETERS, *PKPH_CONFIG_PARAMETERS;
 
 PHLIBAPI
-NTSTATUS
+VOID
 NTAPI
 KphInitialize(
     VOID
@@ -264,7 +264,7 @@ NTAPI
 KphOpenDriver(
     _Out_ PHANDLE DriverHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes
     );
 
 PHLIBAPI
@@ -272,7 +272,7 @@ NTSTATUS
 NTAPI
 KphQueryInformationDriver(
     _In_ HANDLE DriverHandle,
-    _In_ DRIVER_INFORMATION_CLASS DriverInformationClass,
+    _In_ KPH_DRIVER_INFORMATION_CLASS DriverInformationClass,
     _Out_writes_bytes_opt_(DriverInformationLength) PVOID DriverInformation,
     _In_ ULONG DriverInformationLength,
     _Inout_opt_ PULONG ReturnLength
@@ -437,7 +437,7 @@ NTAPI
 KphCreateFile(
     _Out_ PHANDLE FileHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _Out_ PIO_STATUS_BLOCK IoStatusBlock,
     _In_opt_ PLARGE_INTEGER AllocationSize,
     _In_ ULONG FileAttributes,

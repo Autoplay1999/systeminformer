@@ -25,6 +25,7 @@ typedef enum _PV_EXPORT_TREE_COLUMN_ITEM
     PV_EXPORT_TREE_COLUMN_ITEM_HINT,
     PV_EXPORT_TREE_COLUMN_ITEM_FWDNAME,
     PV_EXPORT_TREE_COLUMN_ITEM_SYMBOL,
+    PV_EXPORT_TREE_COLUMN_ITEM_UNDECORATED,
     PV_EXPORT_TREE_COLUMN_ITEM_SUPRESSION,
     PV_EXPORT_TREE_COLUMN_ITEM_MAXIMUM
 } PV_EXPORT_TREE_COLUMN_ITEM;
@@ -46,6 +47,7 @@ typedef struct _PV_EXPORT_NODE
     PPH_STRING HintString;
     PPH_STRING ForwardString;
     PPH_STRING SymbolString;
+    PPH_STRING UndecoratedString;
 
     PH_STRINGREF TextCache[PV_EXPORT_TREE_COLUMN_ITEM_MAXIMUM];
 } PV_EXPORT_NODE, *PPV_EXPORT_NODE;
@@ -279,16 +281,17 @@ NTSTATUS PvpPeExportsEnumerateThread(
                     PPH_STRING exportName;
 
                     exportName = PhConvertUtf8ToUtf16(exportEntry.Name);
-
-                    if (exportName->Buffer[0] == L'?')
-                    {
-                        PPH_STRING undecoratedName;
-
-                        if (undecoratedName = PhUndecorateSymbolName(PvSymbolProvider, PhGetString(exportName)))
-                            PhMoveReference(&exportName, undecoratedName);
-                    }
-
                     exportNode->NameString = exportName;
+                }
+
+                if (exportNode->NameString && exportNode->NameString->Buffer[0] == L'?')
+                {
+                    PPH_STRING undecoratedName;
+
+                    if (undecoratedName = PhUndecorateSymbolName(PvSymbolProvider, PhGetString(exportNode->NameString)))
+                    {
+                        PhMoveReference(&exportNode->UndecoratedString, undecoratedName);
+                    }
                 }
 
                 if (exportFunction.Function)
@@ -552,7 +555,16 @@ INT_PTR CALLBACK PvPeExportsDlgProc(
             SetBkMode((HDC)wParam, TRANSPARENT);
             SetTextColor((HDC)wParam, RGB(0, 0, 0));
             SetDCBrushColor((HDC)wParam, RGB(255, 255, 255));
-            return (INT_PTR)GetStockBrush(DC_BRUSH);
+            return (INT_PTR)PhGetStockBrush(DC_BRUSH);
+        }
+        break;
+    case WM_KEYDOWN:
+        {
+            if (LOWORD(wParam) == 'K' && GetKeyState(VK_CONTROL) < 0)
+            {
+                SetFocus(context->SearchHandle);
+                return TRUE;
+            }
         }
         break;
     }
@@ -777,6 +789,12 @@ BEGIN_SORT_FUNCTION(Supression)
 }
 END_SORT_FUNCTION
 
+BEGIN_SORT_FUNCTION(UndecoratedName)
+{
+    sortResult = PhCompareStringWithNull(node1->UndecoratedString, node2->UndecoratedString, FALSE);
+}
+END_SORT_FUNCTION
+
 BOOLEAN NTAPI PvExportTreeNewCallback(
     _In_ HWND hwnd,
     _In_ PH_TREENEW_MESSAGE Message,
@@ -807,6 +825,7 @@ BOOLEAN NTAPI PvExportTreeNewCallback(
                     SORT_FUNCTION(ForwardName),
                     SORT_FUNCTION(Symbol),
                     SORT_FUNCTION(Supression),
+                    SORT_FUNCTION(UndecoratedName),
                 };
                 int (__cdecl *sortFunction)(void *, const void *, const void *);
 
@@ -863,6 +882,9 @@ BOOLEAN NTAPI PvExportTreeNewCallback(
             case PV_EXPORT_TREE_COLUMN_ITEM_SYMBOL:
                 getCellText->Text = PhGetStringRef(node->SymbolString);
                 break;
+            case PV_EXPORT_TREE_COLUMN_ITEM_UNDECORATED:
+                getCellText->Text = PhGetStringRef(node->UndecoratedString);
+                break;
             case PV_EXPORT_TREE_COLUMN_ITEM_SUPRESSION:
                 {
                     if (node->ExportSuppressed)
@@ -888,7 +910,11 @@ BOOLEAN NTAPI PvExportTreeNewCallback(
         return TRUE;
     case TreeNewSortChanged:
         {
-            TreeNew_GetSort(hwnd, &context->TreeNewSortColumn, &context->TreeNewSortOrder);
+            PPH_TREENEW_SORT_CHANGED_EVENT sorting = Parameter1;
+
+            context->TreeNewSortColumn = sorting->SortColumn;
+            context->TreeNewSortOrder = sorting->SortOrder;
+
             TreeNew_NodesStructured(hwnd);
         }
         return TRUE;
@@ -909,10 +935,6 @@ BOOLEAN NTAPI PvExportTreeNewCallback(
                         PhDereferenceObject(text);
                     }
                 }
-                break;
-            case 'A':
-                if (GetKeyState(VK_CONTROL) < 0)
-                    TreeNew_SelectRange(context->TreeNewHandle, 0, -1);
                 break;
             }
         }
@@ -1022,8 +1044,8 @@ VOID PvInitializeExportTree(
     Context->TreeNewHandle = TreeNewHandle;
     PhSetControlTheme(TreeNewHandle, L"explorer");
 
-    TreeNew_SetCallback(TreeNewHandle, PvExportTreeNewCallback, Context);
     TreeNew_SetRedraw(TreeNewHandle, FALSE);
+    TreeNew_SetCallback(TreeNewHandle, PvExportTreeNewCallback, Context);
 
     PhAddTreeNewColumnEx2(TreeNewHandle, PV_EXPORT_TREE_COLUMN_ITEM_INDEX, TRUE, L"#", 40, PH_ALIGN_LEFT, PV_EXPORT_TREE_COLUMN_ITEM_INDEX, 0, 0);
     PhAddTreeNewColumnEx2(TreeNewHandle, PV_EXPORT_TREE_COLUMN_ITEM_RVA, TRUE, L"RVA", 80, PH_ALIGN_LEFT, PV_EXPORT_TREE_COLUMN_ITEM_RVA, 0, 0);
@@ -1031,11 +1053,12 @@ VOID PvInitializeExportTree(
     PhAddTreeNewColumnEx2(TreeNewHandle, PV_EXPORT_TREE_COLUMN_ITEM_ORDINAL, TRUE, L"Ordinal", 50, PH_ALIGN_LEFT, PV_EXPORT_TREE_COLUMN_ITEM_ORDINAL, 0, 0);
     PhAddTreeNewColumnEx2(TreeNewHandle, PV_EXPORT_TREE_COLUMN_ITEM_HINT, TRUE, L"Hint", 50, PH_ALIGN_LEFT, PV_EXPORT_TREE_COLUMN_ITEM_HINT, 0, 0);
     PhAddTreeNewColumnEx2(TreeNewHandle, PV_EXPORT_TREE_COLUMN_ITEM_FWDNAME, TRUE, L"Forwarded name", 150, PH_ALIGN_LEFT, PV_EXPORT_TREE_COLUMN_ITEM_FWDNAME, 0, 0);
-    PhAddTreeNewColumnEx2(TreeNewHandle, PV_EXPORT_TREE_COLUMN_ITEM_SYMBOL, TRUE, L"Undecorated name", 150, PH_ALIGN_LEFT, PV_EXPORT_TREE_COLUMN_ITEM_SYMBOL, 0, 0);
+    PhAddTreeNewColumnEx2(TreeNewHandle, PV_EXPORT_TREE_COLUMN_ITEM_SYMBOL, TRUE, L"Symbol name", 150, PH_ALIGN_LEFT, PV_EXPORT_TREE_COLUMN_ITEM_SYMBOL, 0, 0);
+    PhAddTreeNewColumnEx2(TreeNewHandle, PV_EXPORT_TREE_COLUMN_ITEM_UNDECORATED, TRUE, L"Undecorated name", 150, PH_ALIGN_LEFT, PV_EXPORT_TREE_COLUMN_ITEM_UNDECORATED, 0, 0);
     PhAddTreeNewColumnEx2(TreeNewHandle, PV_EXPORT_TREE_COLUMN_ITEM_SUPRESSION, TRUE, L"CFG export suppression", 80, PH_ALIGN_LEFT, PV_EXPORT_TREE_COLUMN_ITEM_SUPRESSION, 0, 0);
 
-    TreeNew_SetRedraw(TreeNewHandle, TRUE);
     TreeNew_SetSort(TreeNewHandle, PV_EXPORT_TREE_COLUMN_ITEM_INDEX, AscendingSortOrder);
+    TreeNew_SetRedraw(TreeNewHandle, TRUE);
 
     PhCmInitializeManager(&Context->Cm, TreeNewHandle, PV_EXPORT_TREE_COLUMN_ITEM_MAXIMUM, PvExportTreeNewPostSortFunction);
 

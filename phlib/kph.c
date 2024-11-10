@@ -15,23 +15,13 @@
 #include <kphuser.h>
 
 static PH_STRINGREF KphDefaultPortName = PH_STRINGREF_INIT(KPH_PORT_NAME);
-
-//static PH_INITONCE KphMessageInitOnce = PH_INITONCE_INIT;
 static PH_FREE_LIST KphMessageFreeList;
 
-NTSTATUS KphInitialize(
+VOID KphInitialize(
     VOID
     )
 {
-    //if (PhBeginInitOnce(&KphMessageInitOnce))
-    //{
-    //    PhInitializeFreeList(&KphMessageFreeList, sizeof(KPH_MESSAGE), 16);
-    //    PhEndInitOnce(&KphMessageInitOnce);
-    //}
-
     PhInitializeFreeList(&KphMessageFreeList, sizeof(KPH_MESSAGE), 16);
-
-    return STATUS_SUCCESS;
 }
 
 NTSTATUS KphConnect(
@@ -42,11 +32,6 @@ NTSTATUS KphConnect(
     SC_HANDLE serviceHandle;
     BOOLEAN created = FALSE;
     PPH_STRINGREF portName;
-
-    status = KphInitialize();
-
-    if (!NT_SUCCESS(status))
-        return status;
 
     portName = (Config->PortName ? Config->PortName : &KphDefaultPortName);
 
@@ -998,7 +983,7 @@ NTSTATUS KphSetInformationObject(
 NTSTATUS KphOpenDriver(
     _Out_ PHANDLE DriverHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes
     )
 {
     NTSTATUS status;
@@ -1010,7 +995,7 @@ NTSTATUS KphOpenDriver(
     KphMsgInit(msg, KphMsgOpenDriver);
     msg->User.OpenDriver.DriverHandle = DriverHandle;
     msg->User.OpenDriver.DesiredAccess = DesiredAccess;
-    msg->User.OpenDriver.ObjectAttributes = ObjectAttributes;
+    msg->User.OpenDriver.ObjectAttributes = (POBJECT_ATTRIBUTES)ObjectAttributes;
     status = KphCommsSendMessage(msg);
 
     if (NT_SUCCESS(status))
@@ -1024,7 +1009,7 @@ NTSTATUS KphOpenDriver(
 
 NTSTATUS KphQueryInformationDriver(
     _In_ HANDLE DriverHandle,
-    _In_ DRIVER_INFORMATION_CLASS DriverInformationClass,
+    _In_ KPH_DRIVER_INFORMATION_CLASS DriverInformationClass,
     _Out_writes_bytes_opt_(DriverInformationLength) PVOID DriverInformation,
     _In_ ULONG DriverInformationLength,
     _Inout_opt_ PULONG ReturnLength
@@ -1483,7 +1468,7 @@ NTSTATUS KphQueryPerformanceCounter(
 NTSTATUS KphCreateFile(
     _Out_ PHANDLE FileHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _Out_ PIO_STATUS_BLOCK IoStatusBlock,
     _In_opt_ PLARGE_INTEGER AllocationSize,
     _In_ ULONG FileAttributes,
@@ -1504,7 +1489,7 @@ NTSTATUS KphCreateFile(
     KphMsgInit(msg, KphMsgCreateFile);
     msg->User.CreateFile.FileHandle = FileHandle;
     msg->User.CreateFile.DesiredAccess = DesiredAccess;
-    msg->User.CreateFile.ObjectAttributes = ObjectAttributes;
+    msg->User.CreateFile.ObjectAttributes = (POBJECT_ATTRIBUTES)ObjectAttributes;
     msg->User.CreateFile.IoStatusBlock = IoStatusBlock;
     msg->User.CreateFile.AllocationSize = AllocationSize;
     msg->User.CreateFile.FileAttributes = FileAttributes;

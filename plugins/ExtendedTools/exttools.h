@@ -24,6 +24,7 @@
 #include "resource.h"
 
 #include "framemon.h"
+#include "tpm.h"
 
 // d3dkmddi requires the WDK (dmex)
 #if defined(NTDDI_WIN10_CO) && (NTDDI_VERSION >= NTDDI_WIN10_CO)
@@ -45,6 +46,7 @@ __has_include (<d3dkmthk.h>)
 #endif
 
 #include <cfgmgr32.h>
+#include <tbs.h>
 
 // Undocumented device properties (Win10 only)
 DEFINE_DEVPROPKEY(DEVPKEY_Gpu_Luid, 0x60b193cb, 0x5276, 0x4d0f, 0x96, 0xfc, 0xf1, 0x73, 0xab, 0xad, 0x3e, 0xc6, 2); // DEVPROP_TYPE_UINT64
@@ -550,7 +552,7 @@ VOID EtFormatNetworkSize(
     );
 
 VOID EtFormatDouble(
-    _In_ DOUBLE Value,
+    _In_ FLOAT Value,
     _In_ PET_PROCESS_BLOCK Block,
     _In_ PPH_PLUGIN_TREENEW_MESSAGE Message
     );
@@ -1018,13 +1020,6 @@ VOID EtEtwMiniInformationInitializing(
 
 // iconext
 
-typedef struct _TB_GRAPH_CONTEXT
-{
-    LONG GraphDpi;
-    ULONG GraphColor1;
-    ULONG GraphColor2;
-} TB_GRAPH_CONTEXT, *PTB_GRAPH_CONTEXT;
-
 extern BOOLEAN EtTrayIconTransparencyEnabled;
 
 VOID EtLoadTrayIconGuids(
@@ -1167,8 +1162,8 @@ ULONG64 EtLookupTotalGpuAdapterShared(
     );
 
 // Firewall
-
 extern BOOLEAN EtFwEnabled;
+extern ULONG EtFwFlagsMask;
 extern ULONG EtFwStatus;
 extern ULONG FwRunCount;
 extern HANDLE EtFwEngineHandle;
@@ -1227,15 +1222,15 @@ typedef struct _FW_EVENT_ITEM
 
     union
     {
-        BOOLEAN Flags;
+        ULONG Flags;
         struct
         {
-            BOOLEAN Loopback : 1;
-            BOOLEAN Spare : 3;
-            BOOLEAN LocalPortServiceResolved : 1;
-            BOOLEAN RemotePortServiceResolved : 1;
-            BOOLEAN LocalHostnameResolved : 1;
-            BOOLEAN RemoteHostnameResolved : 1;
+            ULONG Loopback : 1;
+            ULONG LocalPortServiceResolved : 1;
+            ULONG RemotePortServiceResolved : 1;
+            ULONG LocalHostnameResolved : 1;
+            ULONG RemoteHostnameResolved : 1;
+            ULONG Spare : 27;
         };
     };
 
@@ -1314,6 +1309,14 @@ VOID LoadSettingsFwTreeList(
 
 VOID SaveSettingsFwTreeList(
     VOID
+    );
+
+VOID EtFwFlushResolveCache(
+    VOID
+    );
+
+VOID EtFwQueryHostnameForEntry(
+    _In_ PFW_EVENT_ITEM Entry
     );
 
 _Success_(return)
@@ -1443,6 +1446,11 @@ typedef ULONG (WINAPI* _FwpmNetEventEnum5)(
 #define FWP_DIRECTION_MAP_FORWARD 0x3902
 #define FWP_DIRECTION_MAP_BIDIRECTIONAL 0x3903
 
+typedef enum _FW_PROVIDER_FLAG
+{
+    FW_PROVIDER_FLAG_HOSTNAME = 0x1,
+} FW_PROVIDER_FLAG;
+
 VOID InitializeFwTreeList(
     _In_ HWND hwnd
     );
@@ -1483,6 +1491,14 @@ VOID EtFwDeselectAllFwNodes(
 
 VOID EtFwSelectAndEnsureVisibleFwNode(
     _In_ PFW_EVENT_ITEM FwNode
+    );
+
+VOID EtFwInvalidateAllFwNodes(
+    VOID
+    );
+
+VOID EtFwInvalidateAllFwNodesHostnames(
+    VOID
     );
 
 VOID EtFwCopyFwList(
@@ -1630,6 +1646,38 @@ BOOLEAN EtTpmIsReady(
 
 VOID EtShowTpmDialog(
     _In_ HWND ParentWindowHandle
+    );
+
+_Must_inspect_result_
+NTSTATUS EtTpmOpen(
+    _Out_ PTBS_HCONTEXT TbsContextHandle
+    );
+
+NTSTATUS EtTpmClose(
+    _In_ TBS_HCONTEXT TbsContextHandle
+    );
+
+_Must_inspect_result_
+NTSTATUS EtTpmReadPublic(
+    _In_ TBS_HCONTEXT TbsContextHandle,
+    _In_ TPM_NV_INDEX Index,
+    _Out_ TPMA_NV* Attributes,
+    _Out_ PUSHORT DataSize
+    );
+
+_Must_inspect_result_
+NTSTATUS EtTpmRead(
+    _In_ TBS_HCONTEXT TbsContextHandle,
+    _In_ TPM_NV_INDEX Index,
+    _Out_writes_bytes_all_(DataSize) PBYTE Data,
+    _In_ USHORT DataSize
+    );
+
+// tpm_editor
+
+VOID EtShowTpmEditDialog(
+    _In_ HWND ParentWindowHandle,
+    _In_ TPM_NV_INDEX Index
     );
 
 #endif

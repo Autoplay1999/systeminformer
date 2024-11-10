@@ -46,7 +46,7 @@ typedef struct _PV_DIRECTORY_NODE
     PVOID RvaStart;
     PVOID RvaEnd;
     ULONG RvaSize;
-    DOUBLE DirectoryEntropy;
+    FLOAT DirectoryEntropy;
     PPH_STRING UniqueIdString;
     PPH_STRING DirectoryNameString;
     PPH_STRING RawStartString;
@@ -180,7 +180,7 @@ VOID PvpPeEnumerateImageDataDirectory(
     directoryNode->UniqueIdString = PhFormatUInt64(directoryNode->UniqueId, FALSE);
     directoryNode->DirectoryNameString = PhCreateString(Name);
 
-    if (NT_SUCCESS(PhGetMappedImageDataEntry(&PvMappedImage, Index, &directory)))
+    if (NT_SUCCESS(PhGetMappedImageDataDirectory(&PvMappedImage, Index, &directory)))
     {
         if (directory->VirtualAddress)
         {
@@ -260,7 +260,7 @@ VOID PvpPeEnumerateImageDataDirectory(
 
         __try
         {
-            DOUBLE imageDirectoryEntropy;
+            FLOAT imageDirectoryEntropy;
 
             if (PhCalculateEntropy(
                 imageDirectoryData,
@@ -351,6 +351,7 @@ NTSTATUS PvpPeDirectoryEnumerateThread(
     PvpPeEnumerateImageDataDirectory(Context, IMAGE_DIRECTORY_ENTRY_IAT, L"IAT");
     PvpPeEnumerateImageDataDirectory(Context, IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT, L"Delay load imports");
     PvpPeEnumerateImageDataDirectory(Context, IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR, L"CLR");
+    PvpPeEnumerateImageDataDirectory(Context, 15, L"Reserved");
 
     PostMessage(Context->DialogHandle, WM_PV_SEARCH_FINISHED, 0, 0);
     return STATUS_SUCCESS;
@@ -535,7 +536,16 @@ INT_PTR CALLBACK PvPeDirectoryDlgProc(
             SetBkMode((HDC)wParam, TRANSPARENT);
             SetTextColor((HDC)wParam, RGB(0, 0, 0));
             SetDCBrushColor((HDC)wParam, RGB(255, 255, 255));
-            return (INT_PTR)GetStockBrush(DC_BRUSH);
+            return (INT_PTR)PhGetStockBrush(DC_BRUSH);
+        }
+        break;
+    case WM_KEYDOWN:
+        {
+            if (LOWORD(wParam) == 'K' && GetKeyState(VK_CONTROL) < 0)
+            {
+                SetFocus(context->SearchHandle);
+                return TRUE;
+            }
         }
         break;
     }
@@ -955,7 +965,11 @@ BOOLEAN NTAPI PvDirectoryTreeNewCallback(
         return TRUE;
     case TreeNewSortChanged:
         {
-            TreeNew_GetSort(hwnd, &context->TreeNewSortColumn, &context->TreeNewSortOrder);
+            PPH_TREENEW_SORT_CHANGED_EVENT sorting = Parameter1;
+
+            context->TreeNewSortColumn = sorting->SortColumn;
+            context->TreeNewSortOrder = sorting->SortOrder;
+
             TreeNew_NodesStructured(hwnd);
         }
         return TRUE;

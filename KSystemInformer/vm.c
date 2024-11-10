@@ -6,7 +6,7 @@
  * Authors:
  *
  *     wj32    2010-2016
- *     jxy-s   2022-2023
+ *     jxy-s   2022-2024
  *
  */
 
@@ -44,7 +44,7 @@ NTSTATUS KphpQuerySectionMappings(
     PEX_SPIN_LOCK lock;
     KIRQL oldIrql;
 
-    NPAGED_CODE_DISPATCH_MAX();
+    KPH_NPAGED_CODE_DISPATCH_MAX();
 
     lock = NULL;
     oldIrql = 0;
@@ -179,7 +179,7 @@ Exit:
     return status;
 }
 
-PAGED_FILE();
+KPH_PAGED_FILE();
 
 /**
  * \brief Copies process or kernel memory into the current process.
@@ -213,7 +213,7 @@ NTSTATUS KphReadVirtualMemory(
     PVOID buffer;
     BYTE stackBuffer[0x200];
 
-    PAGED_CODE_PASSIVE();
+    KPH_PAGED_CODE_PASSIVE();
 
     numberOfBytesRead = 0;
     releaseModuleLock = FALSE;
@@ -227,9 +227,7 @@ NTSTATUS KphReadVirtualMemory(
 
     if (AccessMode != KernelMode)
     {
-        if ((Add2Ptr(BaseAddress, BufferSize) < BaseAddress) ||
-            (Add2Ptr(Buffer, BufferSize) < Buffer) ||
-            (Add2Ptr(Buffer, BufferSize) > MmHighestUserAddress))
+        if (Add2Ptr(BaseAddress, BufferSize) < BaseAddress)
         {
             status = STATUS_ACCESS_VIOLATION;
             goto Exit;
@@ -434,7 +432,7 @@ NTSTATUS KphQuerySection(
     PVOID buffer;
     BYTE stackBuffer[64];
 
-    PAGED_CODE_PASSIVE();
+    KPH_PAGED_CODE_PASSIVE();
 
     sectionObject = NULL;
     returnLength = 0;
@@ -606,7 +604,7 @@ NTSTATUS KphQueryVirtualMemory(
     PKPH_THREAD_CONTEXT thread;
     PUNICODE_STRING mappedFileName;
 
-    PAGED_CODE_PASSIVE();
+    KPH_PAGED_CODE_PASSIVE();
 
     returnLength = 0;
     thread = NULL;

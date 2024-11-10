@@ -17,9 +17,8 @@
  */
 
 #include <phapp.h>
+#include <phplug.h>
 #include <actions.h>
-
-#include <winsta.h>
 
 #include <kphuser.h>
 #include <ksisup.h>
@@ -40,12 +39,7 @@
 #include <srvprv.h>
 #include <thrdprv.h>
 
-static PH_STRINGREF DangerousProcesses[] =
-{
-    PH_STRINGREF_INIT(L"csrss.exe"), PH_STRINGREF_INIT(L"dwm.exe"), PH_STRINGREF_INIT(L"logonui.exe"),
-    PH_STRINGREF_INIT(L"lsass.exe"), PH_STRINGREF_INIT(L"lsm.exe"), PH_STRINGREF_INIT(L"services.exe"),
-    PH_STRINGREF_INIT(L"smss.exe"), PH_STRINGREF_INIT(L"wininit.exe"), PH_STRINGREF_INIT(L"winlogon.exe")
-};
+#include <winsta.h>
 
 static volatile LONG PhSvcReferenceCount = 0;
 static PH_PHSVC_MODE PhSvcCurrentMode;
@@ -61,7 +55,7 @@ HRESULT CALLBACK PhpElevateActionCallbackProc(
 {
     switch (Notification)
     {
-    case TDN_CREATED:
+    case TDN_DIALOG_CONSTRUCTED:
         SendMessage(WindowHandle, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, IDYES, TRUE);
         break;
     }
@@ -72,9 +66,9 @@ HRESULT CALLBACK PhpElevateActionCallbackProc(
 _Success_(return)
 BOOLEAN PhpShowElevatePrompt(
     _In_ HWND WindowHandle,
-    _In_ PWSTR Message,
-    _In_ PVOID Context,
-    _Out_ PINT32 Button
+    _In_ PCWSTR Message,
+    _In_opt_ PVOID Context,
+    _Out_ PLONG Button
     )
 {
     TASKDIALOGCONFIG config;
@@ -82,7 +76,7 @@ BOOLEAN PhpShowElevatePrompt(
     {
         { IDYES, L"Continue"}
     };
-    INT button;
+    LONG button;
 
     // Currently the error dialog box is similar to the one displayed
     // when you try to label a drive in Windows Explorer. It's much better
@@ -107,12 +101,12 @@ BOOLEAN PhpShowElevatePrompt(
     config.pfCallback = PhpElevateActionCallbackProc;
     config.lpCallbackData = (LONG_PTR)Context;
 
-    if (HR_SUCCESS(TaskDialogIndirect(
+    if (PhShowTaskDialog(
         &config,
         &button,
         NULL,
         NULL
-        )))
+        ))
     {
         *Button = button;
         return TRUE;
@@ -136,7 +130,7 @@ BOOLEAN PhpShowElevatePrompt(
 _Success_(return)
 BOOLEAN PhpElevationLevelAndConnectToPhSvc(
     _In_ HWND WindowHandle,
-    _Out_opt_ PBOOLEAN Connected
+    _Out_ PBOOLEAN Connected
     )
 {
     PH_ACTION_ELEVATION_LEVEL elevationLevel;
@@ -187,15 +181,17 @@ BOOLEAN PhpElevationLevelAndConnectToPhSvc(
  */
 BOOLEAN PhpShowErrorAndConnectToPhSvc(
     _In_ HWND WindowHandle,
-    _In_ PWSTR Message,
+    _In_ PCWSTR Message,
     _In_ NTSTATUS Status,
-    _Out_ PBOOLEAN Connected
+    _Out_ PBOOLEAN Connected,
+    _Out_ PBOOLEAN Cancelled
     )
 {
     PH_ACTION_ELEVATION_LEVEL elevationLevel;
-    INT button = IDNO;
+    LONG button = IDNO;
 
     *Connected = FALSE;
+    *Cancelled = FALSE;
 
     if (!(Status == STATUS_ACCESS_DENIED || Status == STATUS_PRIVILEGE_NOT_HELD))
         return FALSE;
@@ -225,6 +221,11 @@ BOOLEAN PhpShowErrorAndConnectToPhSvc(
     {
         *Connected = PhUiConnectToPhSvc(WindowHandle, FALSE);
         return TRUE;
+    }
+
+    if (button == IDCANCEL)
+    {
+        *Cancelled = TRUE;
     }
 
     return FALSE;
@@ -1314,42 +1315,63 @@ BOOLEAN PhUiLogoffSession(
     return FALSE;
 }
 
+typedef struct _PH_PLUGIN_IS_DANGEROUS_PROCESS
+{
+    HANDLE ProcessId;
+    BOOLEAN DangerousProcess;
+} PH_PLUGIN_IS_DANGEROUS_PROCESS, *PPH_PLUGIN_IS_DANGEROUS_PROCESS;
+
 /**
  * Determines if a process is a system process.
  *
  * \param ProcessId The PID of the process to check.
  */
-static BOOLEAN PhpIsDangerousProcess(
+BOOLEAN PhIsDangerousProcess(
     _In_ HANDLE ProcessId
     )
 {
-    NTSTATUS status;
-    PPH_STRING systemDirectory;
+    static ULONG DangerousProcesses[] =
+    {
+        0x6ccbdb46, // csrss.exe
+        0x5920bffe, // dwm.exe
+        0x8880527b, // logonui.exe
+        0x9fd9b2be, // lsass.exe
+        0xb1c6af0a, // lsm.exe
+        0xaafce8c2, // services.exe
+        0xfe38787e, // smss.exe
+        0x9d662730, // wininit.exe
+        0x2aa5caab, // winlogon.exe
+    };
     PPH_STRING fileName;
-    PPH_STRING fullName;
+    ULONG hash;
 
     if (ProcessId == SYSTEM_PROCESS_ID)
         return TRUE;
 
-    if (!NT_SUCCESS(status = PhGetProcessImageFileNameByProcessId(ProcessId, &fileName)))
+    if (!NT_SUCCESS(PhGetProcessImageFileNameByProcessId(ProcessId, &fileName)))
         return FALSE;
 
-    systemDirectory = PH_AUTO(PhGetSystemDirectory());
     PhMoveReference(&fileName, PhGetFileName(fileName));
-    PH_AUTO(fileName);
+    hash = PhHashStringRefEx(&fileName->sr, TRUE, PH_STRING_HASH_X65599);
+    PhDereferenceObject(fileName);
 
     for (ULONG i = 0; i < RTL_NUMBER_OF(DangerousProcesses); i++)
     {
-        fullName = PH_AUTO(PhConcatStringRef3(
-            &systemDirectory->sr,
-            &PhNtPathSeperatorString,
-            &DangerousProcesses[i]
-            ));
-
-        if (PhEqualString(fileName, fullName, TRUE))
-        {
+        if (hash == DangerousProcesses[i])
             return TRUE;
-        }
+    }
+
+    if (PhPluginsEnabled)
+    {
+        PH_PLUGIN_IS_DANGEROUS_PROCESS processInfo;
+
+        processInfo.ProcessId = ProcessId;
+        processInfo.DangerousProcess = FALSE;
+
+        PhInvokeCallback(PhGetGeneralCallback(GeneralCallbackDangerousProcess), &processInfo);
+
+        if (processInfo.DangerousProcess)
+            return TRUE;
     }
 
     return FALSE;
@@ -1373,8 +1395,8 @@ static BOOLEAN PhpIsDangerousProcess(
  */
 static BOOLEAN PhpShowContinueMessageProcesses(
     _In_ HWND WindowHandle,
-    _In_ PWSTR Verb,
-    _In_opt_ PWSTR Message,
+    _In_ PCWSTR Verb,
+    _In_opt_ PCWSTR Message,
     _In_ BOOLEAN WarnOnlyIfDangerous,
     _In_ PPH_PROCESS_ITEM *Processes,
     _In_ ULONG NumberOfProcesses
@@ -1394,7 +1416,7 @@ static BOOLEAN PhpShowContinueMessageProcesses(
         HANDLE processHandle;
         BOOLEAN breakOnTermination = FALSE;
 
-        if (PhpIsDangerousProcess(Processes[i]->ProcessId))
+        if (PhIsDangerousProcess(Processes[i]->ProcessId))
         {
             critical = TRUE;
             dangerous = TRUE;
@@ -1523,7 +1545,7 @@ static BOOLEAN PhpShowContinueMessageProcesses(
  */
 static BOOLEAN PhpShowErrorProcess(
     _In_ HWND WindowHandle,
-    _In_ PWSTR Verb,
+    _In_ PCWSTR Verb,
     _In_ PPH_PROCESS_ITEM Process,
     _In_ NTSTATUS Status,
     _In_opt_ ULONG Win32Result
@@ -1617,7 +1639,8 @@ BOOLEAN PhUiTerminateProcesses(
                 WindowHandle,
                 PhaConcatStrings2(L"Unable to terminate ", Processes[i]->ProcessName->Buffer)->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -1636,6 +1659,9 @@ BOOLEAN PhUiTerminateProcesses(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorProcess(WindowHandle, L"terminate", Processes[i], status, 0))
                     break;
             }
@@ -1815,7 +1841,8 @@ BOOLEAN PhUiSuspendProcesses(
                 WindowHandle,
                 PhaConcatStrings2(L"Unable to suspend ", Processes[i]->ProcessName->Buffer)->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -1834,6 +1861,9 @@ BOOLEAN PhUiSuspendProcesses(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorProcess(WindowHandle, L"suspend", Processes[i], status, 0))
                     break;
             }
@@ -2009,7 +2039,8 @@ BOOLEAN PhUiResumeProcesses(
                 WindowHandle,
                 PhaConcatStrings2(L"Unable to resume ", Processes[i]->ProcessName->Buffer)->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -2028,6 +2059,9 @@ BOOLEAN PhUiResumeProcesses(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorProcess(WindowHandle, L"resume", Processes[i], status, 0))
                     break;
             }
@@ -2165,6 +2199,10 @@ BOOLEAN PhUiFreezeTreeProcess(
 {
     NTSTATUS status;
     BOOLEAN cont = FALSE;
+    HANDLE freezeHandle;
+
+    if (ReadPointerAcquire(&Process->FreezeHandle))
+        return FALSE;
 
     if (PhGetIntegerSetting(L"EnableWarnings"))
     {
@@ -2184,13 +2222,15 @@ BOOLEAN PhUiFreezeTreeProcess(
     if (!cont)
         return FALSE;
 
-    status = PhFreezeProcess(Process->ProcessId);
+    status = PhFreezeProcess(&freezeHandle, Process->ProcessId);
 
     if (!NT_SUCCESS(status))
     {
         PhpShowErrorProcess(WindowHandle, L"freeze", Process, status, 0);
         return FALSE;
     }
+
+    InterlockedExchangePointer(&Process->FreezeHandle, freezeHandle);
 
     return TRUE;
 }
@@ -2201,8 +2241,11 @@ BOOLEAN PhUiThawTreeProcess(
     )
 {
     NTSTATUS status;
-
-    status = PhThawProcess(Process->ProcessId);
+    
+    status = PhThawProcess(
+        Process->FreezeHandle,
+        Process->ProcessId
+        );
 
     if (!NT_SUCCESS(status))
     {
@@ -2289,7 +2332,7 @@ BOOLEAN PhUiRestartProcess(
 
     if (!NT_SUCCESS(status = PhGetProcessCurrentDirectory(
         processHandle,
-        !!Process->IsWow64,
+        !!Process->IsWow64Process,
         &currentDirectory
         )))
     {
@@ -2381,7 +2424,7 @@ BOOLEAN PhUiRestartProcess(
         PhGetString(commandLine),
         environment,
         PhGetString(currentDirectory),
-        &startupInfo.StartupInfo,
+        &startupInfo,
         PH_CREATE_PROCESS_SUSPENDED | PH_CREATE_PROCESS_NEW_CONSOLE | PH_CREATE_PROCESS_EXTENDED_STARTUPINFO | PH_CREATE_PROCESS_DEFAULT_ERROR_MODE | flags,
         tokenHandle,
         NULL,
@@ -2396,7 +2439,7 @@ BOOLEAN PhUiRestartProcess(
             PhGetString(commandLine),
             environment,
             PhGetString(currentDirectory),
-            &startupInfo.StartupInfo,
+            &startupInfo,
             PH_CREATE_PROCESS_SUSPENDED | PH_CREATE_PROCESS_NEW_CONSOLE | PH_CREATE_PROCESS_EXTENDED_STARTUPINFO | PH_CREATE_PROCESS_DEFAULT_ERROR_MODE | flags,
             NULL,
             NULL,
@@ -2576,7 +2619,7 @@ BOOLEAN PhUiDebugProcess(
         KEY_READ,
         PH_KEY_LOCAL_MACHINE,
 #ifdef _WIN64
-        Process->IsWow64 ? &aeDebugWow64KeyName : &aeDebugKeyName,
+        Process->IsWow64Process ? &aeDebugWow64KeyName : &aeDebugKeyName,
 #else
         &aeDebugKeyName,
 #endif
@@ -2648,7 +2691,7 @@ BOOLEAN PhUiReduceWorkingSetProcesses(
 
         status = PhOpenProcess(
             &processHandle,
-            PROCESS_CREATE_THREAD,
+            PROCESS_SET_QUOTA,
             Processes[i]->ProcessId
             );
 
@@ -2994,7 +3037,7 @@ BOOLEAN PhUiLoadDllProcess(
         status = PhOpenProcess(
             &processHandle,
             PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SET_LIMITED_INFORMATION |
-            PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION |
+            PROCESS_QUERY_INFORMATION | PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION |
             PROCESS_VM_READ | PROCESS_VM_WRITE | SYNCHRONIZE,
             Process->ProcessId
             );
@@ -3065,7 +3108,8 @@ BOOLEAN PhUiSetIoPriorityProcesses(
                 WindowHandle,
                 PhaConcatStrings2(L"Unable to set the I/O priority of ", Processes[i]->ProcessName->Buffer)->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -3084,6 +3128,9 @@ BOOLEAN PhUiSetIoPriorityProcesses(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorProcess(WindowHandle, L"set the I/O priority of", Processes[i], status, 0))
                     break;
             }
@@ -3177,7 +3224,8 @@ BOOLEAN PhUiSetPriorityProcesses(
                 WindowHandle,
                 PhaConcatStrings2(L"Unable to set the priority of ", Processes[i]->ProcessName->Buffer)->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -3196,6 +3244,9 @@ BOOLEAN PhUiSetPriorityProcesses(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorProcess(WindowHandle, L"set the priority of", Processes[i], status, 0))
                     break;
             }
@@ -3271,17 +3322,6 @@ BOOLEAN PhUiSetBoostPriorityProcess(
 }
 
 #pragma region Service Progress Dialog
-FORCEINLINE
-VOID
-TaskDialog_NavigatePage(
-    _In_ HWND WindowHandle,
-    _In_ TASKDIALOGCONFIG* Config)
-{
-    assert(HandleToUlong(NtCurrentThreadId()) == GetWindowThreadProcessId(WindowHandle, NULL));
-
-    SendMessage(WindowHandle, TDM_NAVIGATE_PAGE, 0, (LPARAM)Config);
-}
-
 typedef struct _PH_UI_SERVICE_PROGRESS_DIALOG
 {
     HWND WindowHandle;
@@ -3394,7 +3434,7 @@ VOID PhUiNavigateServiceErrorDialogPage(
         config.nDefaultButton = IDYES;
     }
 
-    TaskDialog_NavigatePage(Context->WindowHandle, &config);
+    PhTaskDialogNavigatePage(Context->WindowHandle, &config);
 }
 
 VOID PhUiNavigateServiceCompleteDialogPage(
@@ -3630,7 +3670,7 @@ VOID PhUiNavigateServiceProgressDialogPage(
     config.pszMainInstruction = PhaConcatStrings(5, L"Attempting to ", Context->Verb, L" ", Context->Object, L"...")->Buffer;
     config.cxWidth = 200;
 
-    TaskDialog_NavigatePage(Context->WindowHandle, &config);
+    PhTaskDialogNavigatePage(Context->WindowHandle, &config);
 }
 
 HRESULT CALLBACK PhpUiServiceConfirmDialogCallbackProc(
@@ -3674,7 +3714,7 @@ VOID PhpShowServiceProgressInitializeText(
         Context->Object = L"the selected services";
 
     // Make sure the verb is all lowercase.
-    *Verb = PhaLowerString(PhaCreateString((PWSTR)Context->Verb));
+    *Verb = PhaLowerString(PhaCreateString(Context->Verb));
 
     // "terminate" -> "Terminate"
     *VerbCaps = PhaDuplicateString(*Verb);
@@ -3704,7 +3744,7 @@ VOID PhShowServiceProgressDialogConfirmMessage(
     config.pfCallback = PhpUiServiceConfirmDialogCallbackProc;
     config.pszMainIcon = Context->Warning ? TD_WARNING_ICON : TD_INFORMATION_ICON;
     config.pszMainInstruction = PhaConcatStrings(3, L"Do you want to ", action->Buffer, L"?")->Buffer;
-    if (Context->Message) config.pszContent = PhaConcatStrings2((PWSTR)Context->Message, L" Are you sure you want to continue?")->Buffer;
+    if (Context->Message) config.pszContent = PhaConcatStrings2(Context->Message, L" Are you sure you want to continue?")->Buffer;
 
     buttons[0].nButtonID = IDYES;
     buttons[0].pszButtonText = verbCaps->Buffer;
@@ -3716,7 +3756,7 @@ VOID PhShowServiceProgressDialogConfirmMessage(
     config.nDefaultButton = IDYES;
     config.cxWidth = 200;
 
-    TaskDialog_NavigatePage(Context->WindowHandle, &config);
+    PhTaskDialogNavigatePage(Context->WindowHandle, &config);
 }
 
 static LRESULT CALLBACK PhpUiServiceProgressDialogWndProc(
@@ -3787,7 +3827,7 @@ HRESULT CALLBACK PhpUiServiceInitializeDialogCallbackProc(
 
     switch (WindowMessage)
     {
-    case TDN_CREATED:
+    case TDN_DIALOG_CONSTRUCTED:
         {
             context->WindowHandle = WindowHandle;
 
@@ -3824,7 +3864,7 @@ NTSTATUS PhShowServiceProgressDialogThread(
     config.pszContent = L"Initializing...";
     config.cxWidth = 200;
 
-    TaskDialogIndirect(&config, NULL, NULL, NULL);
+    PhShowTaskDialog(&config, NULL, NULL, NULL);
 
     PhDeleteAutoPool(&autoPool);
     PhDereferenceObject(Context);
@@ -3896,14 +3936,14 @@ VOID PhShowServiceProgressDialog(
 
 static BOOLEAN PhpShowContinueMessageServices(
     _In_ HWND WindowHandle,
-    _In_ PWSTR Verb,
-    _In_ PWSTR Message,
+    _In_ PCWSTR Verb,
+    _In_ PCWSTR Message,
     _In_ BOOLEAN Warning,
     _In_ PPH_SERVICE_ITEM* Services,
     _In_ ULONG NumberOfServices
     )
 {
-    PWSTR object;
+    PCWSTR object;
     BOOLEAN cont = FALSE;
 
     if (NumberOfServices == 0)
@@ -4094,7 +4134,8 @@ BOOLEAN PhUiStartServices(
                 WindowHandle,
                 PhaConcatStrings2(L"Unable to start ", PhGetString(Services[i]->Name))->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -4113,6 +4154,9 @@ BOOLEAN PhUiStartServices(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorService(WindowHandle, L"start", Services[i], status, 0))
                     break;
             }
@@ -4177,12 +4221,14 @@ BOOLEAN PhUiStartService(
     if (!success)
     {
         BOOLEAN connected;
+        BOOLEAN cancelled;
 
         if (PhpShowErrorAndConnectToPhSvc(
             WindowHandle,
             PhaConcatStrings2(L"Unable to start ", PhGetString(Service->Name))->Buffer,
             status,
-            &connected
+            &connected,
+            &cancelled
             ))
         {
             if (connected)
@@ -4197,7 +4243,10 @@ BOOLEAN PhUiStartService(
         }
         else
         {
-            PhpShowErrorService(WindowHandle, L"start", Service, status, 0);
+            if (!cancelled)
+            {
+                PhpShowErrorService(WindowHandle, L"start", Service, status, 0);
+            }
         }
     }
 
@@ -4290,7 +4339,8 @@ BOOLEAN PhUiContinueServices(
                 WindowHandle,
                 PhaConcatStrings2(L"Unable to continue ", PhGetString(Services[i]->Name))->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -4309,6 +4359,9 @@ BOOLEAN PhUiContinueServices(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorService(WindowHandle, L"continue", Services[i], status, 0))
                     break;
             }
@@ -4375,12 +4428,14 @@ BOOLEAN PhUiContinueService(
     if (!success)
     {
         BOOLEAN connected;
+        BOOLEAN cancelled;
 
         if (PhpShowErrorAndConnectToPhSvc(
             WindowHandle,
             PhaConcatStrings2(L"Unable to continue ", PhGetString(Service->Name))->Buffer,
             status,
-            &connected
+            &connected,
+            &cancelled
             ))
         {
             if (connected)
@@ -4395,7 +4450,10 @@ BOOLEAN PhUiContinueService(
         }
         else
         {
-            PhpShowErrorService(WindowHandle, L"continue", Service, status, 0);
+            if (!cancelled)
+            {
+                PhpShowErrorService(WindowHandle, L"continue", Service, status, 0);
+            }
         }
     }
 
@@ -4488,7 +4546,8 @@ BOOLEAN PhUiPauseServices(
                 WindowHandle,
                 PhaConcatStrings2(L"Unable to pause ", PhGetString(Services[i]->Name))->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -4507,6 +4566,9 @@ BOOLEAN PhUiPauseServices(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorService(WindowHandle, L"pause", Services[i], status, 0))
                     break;
             }
@@ -4573,12 +4635,14 @@ BOOLEAN PhUiPauseService(
     if (!success)
     {
         BOOLEAN connected;
+        BOOLEAN cancelled;
 
         if (PhpShowErrorAndConnectToPhSvc(
             WindowHandle,
             PhaConcatStrings2(L"Unable to pause ", Service->Name->Buffer)->Buffer,
             status,
-            &connected
+            &connected,
+            &cancelled
             ))
         {
             if (connected)
@@ -4593,7 +4657,10 @@ BOOLEAN PhUiPauseService(
         }
         else
         {
-            PhpShowErrorService(WindowHandle, L"pause", Service, status, 0);
+            if (!cancelled)
+            {
+                PhpShowErrorService(WindowHandle, L"pause", Service, status, 0);
+            }
         }
     }
 
@@ -4686,7 +4753,8 @@ BOOLEAN PhUiStopServices(
                 WindowHandle,
                 PhaConcatStrings2(L"Unable to stop ", PhGetString(Services[i]->Name))->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -4705,6 +4773,9 @@ BOOLEAN PhUiStopServices(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorService(WindowHandle, L"stop", Services[i], status, 0))
                     break;
             }
@@ -4771,12 +4842,14 @@ BOOLEAN PhUiStopService(
     if (!success)
     {
         BOOLEAN connected;
+        BOOLEAN cancelled;
 
         if (PhpShowErrorAndConnectToPhSvc(
             WindowHandle,
             PhaConcatStrings2(L"Unable to stop ", PhGetString(Service->Name))->Buffer,
             status,
-            &connected
+            &connected,
+            &cancelled
             ))
         {
             if (connected)
@@ -4833,12 +4906,14 @@ BOOLEAN PhUiDeleteService(
     if (!success)
     {
         BOOLEAN connected;
+        BOOLEAN cancelled;
 
         if (PhpShowErrorAndConnectToPhSvc(
             WindowHandle,
             PhaConcatStrings2(L"Unable to delete ", PhGetString(Service->Name))->Buffer,
             status,
-            &connected
+            &connected,
+            &cancelled
             ))
         {
             if (connected)
@@ -4914,7 +4989,8 @@ BOOLEAN PhUiCloseConnections(
                 WindowHandle,
                 L"Unable to close the TCP connection",
                 PhDosErrorToNtStatus(result),
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -4933,6 +5009,9 @@ BOOLEAN PhUiCloseConnections(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (PhShowMessage2(
                     WindowHandle,
                     TD_OK_BUTTON,
@@ -5059,7 +5138,8 @@ BOOLEAN PhUiTerminateThreads(
                 WindowHandle,
                 PhaFormatString(L"Unable to terminate thread %lu", HandleToUlong(Threads[i]->ThreadId))->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -5078,6 +5158,9 @@ BOOLEAN PhUiTerminateThreads(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorThread(WindowHandle, L"terminate", Threads[i], status, 0))
                     break;
             }
@@ -5122,7 +5205,8 @@ BOOLEAN PhUiSuspendThreads(
                 WindowHandle,
                 PhaFormatString(L"Unable to suspend thread %lu", HandleToUlong(Threads[i]->ThreadId))->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -5141,6 +5225,9 @@ BOOLEAN PhUiSuspendThreads(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorThread(WindowHandle, L"suspend", Threads[i], status, 0))
                     break;
             }
@@ -5185,7 +5272,8 @@ BOOLEAN PhUiResumeThreads(
                 WindowHandle,
                 PhaFormatString(L"Unable to resume thread %lu", HandleToUlong(Threads[i]->ThreadId))->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -5204,6 +5292,9 @@ BOOLEAN PhUiResumeThreads(
             }
             else
             {
+                if (cancelled)
+                    break;
+
                 if (!PhpShowErrorThread(WindowHandle, L"resume", Threads[i], status, 0))
                     break;
             }
@@ -5376,6 +5467,7 @@ BOOLEAN PhUiSetIoPriorityThread(
     if (!NT_SUCCESS(status))
     {
         BOOLEAN connected;
+        BOOLEAN cancelled;
 
         success = FALSE;
 
@@ -5384,7 +5476,8 @@ BOOLEAN PhUiSetIoPriorityThread(
             WindowHandle,
             PhaFormatString(L"Unable to set the I/O priority of thread %lu", HandleToUlong(Thread->ThreadId))->Buffer,
             status,
-            &connected
+            &connected,
+            &cancelled
             ))
         {
             if (connected)
@@ -5571,12 +5664,14 @@ BOOLEAN PhUiUnloadModule(
         {
             BOOLEAN success = FALSE;
             BOOLEAN connected;
+            BOOLEAN cancelled;
 
             if (PhpShowErrorAndConnectToPhSvc(
                 WindowHandle,
                 PhaConcatStrings2(L"Unable to unload ", Module->Name->Buffer)->Buffer,
                 status,
-                &connected
+                &connected,
+                &cancelled
                 ))
             {
                 if (connected)
@@ -5591,6 +5686,9 @@ BOOLEAN PhUiUnloadModule(
             }
             else
             {
+                if (cancelled)
+                    return FALSE;
+
                 PhShowStatus(
                     WindowHandle,
                     PhaConcatStrings(
@@ -5758,7 +5856,7 @@ BOOLEAN PhUiFreeMemory(
 
 static BOOLEAN PhpShowErrorHandle(
     _In_ HWND WindowHandle,
-    _In_ PWSTR Verb,
+    _In_ PCWSTR Verb,
     _In_ PPH_HANDLE_ITEM Handle,
     _In_ NTSTATUS Status,
     _In_opt_ ULONG Win32Result

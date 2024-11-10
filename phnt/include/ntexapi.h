@@ -363,6 +363,16 @@ NtSetEvent(
     _Out_opt_ PLONG PreviousState
     );
 
+#if (PHNT_VERSION >= PHNT_WIN11)
+NTSYSCALLAPI
+NTSTATUS
+NTAPI
+NtSetEventEx(
+    _In_ HANDLE ThreadId,
+    _In_opt_ PRTL_SRWLOCK Lock
+    );
+#endif
+
 NTSYSCALLAPI
 NTSTATUS
 NTAPI
@@ -414,7 +424,7 @@ NTAPI
 NtCreateEventPair(
     _Out_ PHANDLE EventPairHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes
     );
 
 NTSYSCALLAPI
@@ -423,7 +433,7 @@ NTAPI
 NtOpenEventPair(
     _Out_ PHANDLE EventPairHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes
     );
 
 NTSYSCALLAPI
@@ -502,7 +512,7 @@ NTAPI
 NtCreateMutant(
     _Out_ PHANDLE MutantHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ BOOLEAN InitialOwner
     );
 
@@ -512,7 +522,7 @@ NTAPI
 NtOpenMutant(
     _Out_ PHANDLE MutantHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes
     );
 
 NTSYSCALLAPI
@@ -565,7 +575,7 @@ NTAPI
 NtCreateSemaphore(
     _Out_ PHANDLE SemaphoreHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ LONG InitialCount,
     _In_ LONG MaximumCount
     );
@@ -576,7 +586,7 @@ NTAPI
 NtOpenSemaphore(
     _Out_ PHANDLE SemaphoreHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes
     );
 
 NTSYSCALLAPI
@@ -636,7 +646,6 @@ typedef enum _TIMER_SET_INFORMATION_CLASS
     MaxTimerInfoClass
 } TIMER_SET_INFORMATION_CLASS;
 
-#if (PHNT_VERSION >= PHNT_WIN7)
 typedef struct _COUNTED_REASON_CONTEXT *PCOUNTED_REASON_CONTEXT;
 
 typedef struct _TIMER_SET_COALESCABLE_TIMER_INFO
@@ -649,7 +658,6 @@ typedef struct _TIMER_SET_COALESCABLE_TIMER_INFO
     _In_ ULONG TolerableDelay;
     _Out_opt_ PBOOLEAN PreviousState;
 } TIMER_SET_COALESCABLE_TIMER_INFO, *PTIMER_SET_COALESCABLE_TIMER_INFO;
-#endif
 
 NTSYSCALLAPI
 NTSTATUS
@@ -657,7 +665,7 @@ NTAPI
 NtCreateTimer(
     _Out_ PHANDLE TimerHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ TIMER_TYPE TimerType
     );
 
@@ -667,7 +675,7 @@ NTAPI
 NtOpenTimer(
     _Out_ PHANDLE TimerHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes
     );
 
 NTSYSCALLAPI
@@ -743,7 +751,7 @@ NTAPI
 NtCreateTimer2(
     _Out_ PHANDLE TimerHandle,
     _In_opt_ PVOID Reserved1,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ ULONG Attributes, // TIMER_TYPE
     _In_ ACCESS_MASK DesiredAccess
     );
@@ -862,7 +870,7 @@ NTAPI
 NtCreateKeyedEvent(
     _Out_ PHANDLE KeyedEventHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _Reserved_ ULONG Flags
     );
 
@@ -872,7 +880,7 @@ NTAPI
 NtOpenKeyedEvent(
     _Out_ PHANDLE KeyedEventHandle,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_ POBJECT_ATTRIBUTES ObjectAttributes
+    _In_ PCOBJECT_ATTRIBUTES ObjectAttributes
     );
 
 NTSYSCALLAPI
@@ -1157,7 +1165,7 @@ NTAPI
 NtCreateWorkerFactory(
     _Out_ PHANDLE WorkerFactoryHandleReturn,
     _In_ ACCESS_MASK DesiredAccess,
-    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_opt_ PCOBJECT_ATTRIBUTES ObjectAttributes,
     _In_ HANDLE CompletionPortHandle,
     _In_ HANDLE WorkerProcessHandle,
     _In_ PVOID StartRoutine,
@@ -1211,9 +1219,6 @@ NtWorkerFactoryWorkerReady(
     );
 
 typedef struct _FILE_IO_COMPLETION_INFORMATION *PFILE_IO_COMPLETION_INFORMATION;
-
-#if (PHNT_VERSION >= PHNT_WIN8)
-
 typedef struct _PORT_MESSAGE *PPORT_MESSAGE;
 
 typedef struct _WORKER_FACTORY_DEFERRED_WORK
@@ -1223,6 +1228,8 @@ typedef struct _WORKER_FACTORY_DEFERRED_WORK
     ULONG AlpcSendMessageFlags;
     ULONG Flags;
 } WORKER_FACTORY_DEFERRED_WORK, *PWORKER_FACTORY_DEFERRED_WORK;
+
+#if (PHNT_VERSION >= PHNT_WIN8)
 
 NTSYSCALLAPI
 NTSTATUS
@@ -1590,7 +1597,7 @@ typedef enum _SYSTEM_INFORMATION_CLASS
     SystemPointerAuthInformation, // SYSTEM_POINTER_AUTH_INFORMATION
     SystemSecureKernelDebuggerInformation,
     SystemOriginalImageFeatureInformation, // q: in: SYSTEM_ORIGINAL_IMAGE_FEATURE_INFORMATION_INPUT, out: SYSTEM_ORIGINAL_IMAGE_FEATURE_INFORMATION_OUTPUT // NtQuerySystemInformationEx
-    SystemMemoryNumaInformation, // SYSTEM_MEMORY_NUMA_INFORMATION_INPUT, SYSTEM_MEMORY_NUMA_INFORMATION_OUTPUT 
+    SystemMemoryNumaInformation, // SYSTEM_MEMORY_NUMA_INFORMATION_INPUT, SYSTEM_MEMORY_NUMA_INFORMATION_OUTPUT
     SystemMemoryNumaPerformanceInformation, // SYSTEM_MEMORY_NUMA_PERFORMANCE_INFORMATION_INPUTSYSTEM_MEMORY_NUMA_PERFORMANCE_INFORMATION_INPUT, SYSTEM_MEMORY_NUMA_PERFORMANCE_INFORMATION_OUTPUT // since 24H2 // 240
     SystemCodeIntegritySignedPoliciesFullInformation,
     SystemSecureSecretsInformation,
@@ -1626,7 +1633,7 @@ typedef struct _SYSTEM_PROCESSOR_INFORMATION
     ULONG ProcessorFeatureBits;
 } SYSTEM_PROCESSOR_INFORMATION, *PSYSTEM_PROCESSOR_INFORMATION;
 
-// ProcessorFeatureBits // ksamd64
+// SYSTEM_PROCESSOR_INFORMATION // ProcessorFeatureBits // ksamd64
 #define KF_RDTSC 0x0000000000000002
 #define KF_CR4 0x0000000000000004
 #define KF_GLOBAL_PAGE 0x0000000000000010
@@ -2682,6 +2689,14 @@ typedef struct _SYSTEM_PROCESSOR_PERFORMANCE_HITCOUNT
     UCHAR PercentFrequency;
 } SYSTEM_PROCESSOR_PERFORMANCE_HITCOUNT, *PSYSTEM_PROCESSOR_PERFORMANCE_HITCOUNT;
 
+// private (Windows 8.1 and above)
+typedef struct _SYSTEM_PROCESSOR_PERFORMANCE_STATE_DISTRIBUTION
+{
+    ULONG ProcessorNumber;
+    ULONG StateCount;
+    _Field_size_(StateCount) SYSTEM_PROCESSOR_PERFORMANCE_HITCOUNT States[1];
+} SYSTEM_PROCESSOR_PERFORMANCE_STATE_DISTRIBUTION, *PSYSTEM_PROCESSOR_PERFORMANCE_STATE_DISTRIBUTION;
+
 // private (Windows 7 and Windows 8)
 typedef struct _SYSTEM_PROCESSOR_PERFORMANCE_HITCOUNT_WIN8
 {
@@ -2689,13 +2704,13 @@ typedef struct _SYSTEM_PROCESSOR_PERFORMANCE_HITCOUNT_WIN8
     UCHAR PercentFrequency;
 } SYSTEM_PROCESSOR_PERFORMANCE_HITCOUNT_WIN8, *PSYSTEM_PROCESSOR_PERFORMANCE_HITCOUNT_WIN8;
 
-// private
-typedef struct _SYSTEM_PROCESSOR_PERFORMANCE_STATE_DISTRIBUTION
+// private (Windows 7 and Windows 8)
+typedef struct _SYSTEM_PROCESSOR_PERFORMANCE_STATE_DISTRIBUTION_WIN8
 {
     ULONG ProcessorNumber;
     ULONG StateCount;
-    _Field_size_(StateCount) SYSTEM_PROCESSOR_PERFORMANCE_HITCOUNT States[1];
-} SYSTEM_PROCESSOR_PERFORMANCE_STATE_DISTRIBUTION, *PSYSTEM_PROCESSOR_PERFORMANCE_STATE_DISTRIBUTION;
+    _Field_size_(StateCount) SYSTEM_PROCESSOR_PERFORMANCE_HITCOUNT_WIN8 States[1];
+} SYSTEM_PROCESSOR_PERFORMANCE_STATE_DISTRIBUTION_WIN8, *PSYSTEM_PROCESSOR_PERFORMANCE_STATE_DISTRIBUTION_WIN8;
 
 // private
 typedef struct _SYSTEM_PROCESSOR_PERFORMANCE_DISTRIBUTION
@@ -3848,6 +3863,14 @@ typedef struct _SYSTEM_HYPERVISOR_DETAIL_INFORMATION
 // private
 typedef struct _SYSTEM_PROCESSOR_CYCLE_STATS_INFORMATION
 {
+    //
+    // First index is bucket (see: PoGetFrequencyBucket) selected based on latest frequency percent
+    // using _KPRCB.PowerState.FrequencyBucketThresholds.
+    //
+    // Second index is _KPRCB.PowerState.ArchitecturalEfficiencyClass, accounting for architecture
+    // dependent KeHeteroSystem and using _KPRCB.PowerState.EarlyBootArchitecturalEfficiencyClass
+    // instead, when appropriate.
+    //
     ULONGLONG Cycles[4][2];
 } SYSTEM_PROCESSOR_CYCLE_STATS_INFORMATION, *PSYSTEM_PROCESSOR_CYCLE_STATS_INFORMATION;
 
@@ -5194,7 +5217,7 @@ typedef struct _KUSER_SHARED_DATA
 
     //
     // This field indicates the status of the 64-bit COM+ package on the
-    // system. It indicates whether the Itermediate Language (IL) COM+
+    // system. It indicates whether the Intermediate Language (IL) COM+
     // images need to use the 64-bit COM+ runtime or the 32-bit COM+ runtime.
     //
 
@@ -5617,8 +5640,13 @@ C_ASSERT(FIELD_OFFSET(KUSER_SHARED_DATA, XState) == 0x3d8);
 #if !defined(NTDDI_WIN10_FE) || (NTDDI_VERSION < NTDDI_WIN10_FE)
 C_ASSERT(FIELD_OFFSET(KUSER_SHARED_DATA, FeatureConfigurationChangeStamp) == 0x710);
 C_ASSERT(FIELD_OFFSET(KUSER_SHARED_DATA, UserPointerAuthMask) == 0x720);
+#if defined(_ARM64_)
+C_ASSERT(FIELD_OFFSET(KUSER_SHARED_DATA, XStateArm64) == 0x728);
+#else
+C_ASSERT(FIELD_OFFSET(KUSER_SHARED_DATA, Reserved10) == 0x728);
+#endif
 #if !defined(WINDOWS_IGNORE_PACKING_MISMATCH)
-C_ASSERT(sizeof(KUSER_SHARED_DATA) == 0x728);
+C_ASSERT(sizeof(KUSER_SHARED_DATA) == 0xa70);
 #endif
 #else
 C_ASSERT(FIELD_OFFSET(KUSER_SHARED_DATA, FeatureConfigurationChangeStamp) == 0x720);

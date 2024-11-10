@@ -118,12 +118,12 @@ BOOLEAN PhRunAsExecuteCommandPrompt(
     );
 
 VOID PhpSplitUserName(
-    _In_ PWSTR UserName,
+    _In_ PCWSTR UserName,
     _Out_opt_ PPH_STRING* DomainPart,
     _Out_opt_ PPH_STRING* UserPart
     );
 
-static PH_KEY_VALUE_PAIR PhpLogonTypePairs[] =
+static CONST PH_KEY_VALUE_PAIR PhpLogonTypePairs[] =
 {
     SIP(L"Batch", LOGON32_LOGON_BATCH),
     SIP(L"Interactive", LOGON32_LOGON_INTERACTIVE),
@@ -1360,15 +1360,19 @@ NTSTATUS PhSetDesktopWinStaAccess(
     PSECURITY_DESCRIPTOR securityDescriptor;
     PACL dacl;
 
-    if (WindowHandle && PhGetIntegerSetting(L"EnableWarnings") && PhShowMessage2(
-        WindowHandle,
-        TD_YES_BUTTON | TD_NO_BUTTON,
-        TD_WARNING_ICON,
-        L"WARNING: This will grant Everyone access to the current window station and desktop.",
-        L"Are you sure you want to continue?"
-        ) == IDNO)
+    if (WindowHandle && PhGetIntegerSetting(L"EnableWarnings"))
     {
-        return STATUS_ACCESS_DENIED;
+        if (PhGetIntegerSetting(L"EnableWarningsRunas") && PhShowMessageOneTime(
+            WindowHandle,
+            TD_YES_BUTTON | TD_NO_BUTTON,
+            TD_WARNING_ICON,
+            L"WARNING: This will grant Everyone access to the current window station and desktop.",
+            L"Are you sure you want to continue?"
+            ) == IDNO)
+        {
+            PhSetIntegerSetting(L"EnableWarningsRunas", 0);
+            return STATUS_ACCESS_DENIED;
+        }
     }
 
     // TODO: Set security on the correct window station and desktop.
@@ -1517,55 +1521,48 @@ NTSTATUS PhExecuteRunAsCommand(
 /**
  * Starts a program as another user.
  *
- * \param hWnd A handle to the parent window.
- * \param Program The command line of the program to start.
- * \param UserName The user to start the program as. The user
- * name should be specified as: domain\\name. This parameter
- * can be NULL if \a ProcessIdWithToken is specified.
- * \param Password The password for the specified user. If there
- * is no password, specify an empty string. This parameter
- * can be NULL if \a ProcessIdWithToken is specified.
+ * \param WindowHandle A handle to the parent window.
+ * \param CommandLine The command line of the program to start.
+ * \param UserName The user to start the program as. The username should be specified as: domain\\name.
+ *        This parameter can be NULL if \a ProcessIdWithToken is specified.
+ * \param Password The password for the specified user. If there is no password, specify an empty string.
+ *        This parameter can be NULL if \a ProcessIdWithToken is specified.
  * \param LogonType The logon type for the specified user. This
- * parameter can be 0 if \a ProcessIdWithToken is specified.
- * \param ProcessIdWithToken The ID of a process from which
- * to duplicate the token.
- * \param SessionId The ID of the session to run the program
- * under.
- * \param DesktopName The window station and desktop to run the
- * program under.
+ *        parameter can be 0 if \a ProcessIdWithToken is specified.
+ * \param ProcessIdWithToken The ID of a process from which to duplicate the token.
+ * \param SessionId The ID of the session to run the program under.
+ * \param DesktopName The window station and desktop to run the program under.
  * \param UseLinkedToken Uses the linked token if possible.
  *
  * \retval STATUS_CANCELLED The user cancelled the operation.
  *
- * \remarks This function will cause another instance of
- * Process Hacker to be executed if the current security context
- * does not have sufficient system access. This is done
- * through a UAC elevation prompt.
+ * \remarks This function will cause another instance of System Informer to be executed if the current security context
+ * does not have sufficient system access. This is done through a UAC elevation prompt.
  */
 NTSTATUS PhExecuteRunAsCommand2(
-    _In_ HWND hWnd,
-    _In_ PWSTR Program,
-    _In_opt_ PWSTR UserName,
-    _In_opt_ PWSTR Password,
+    _In_ HWND WindowHandle,
+    _In_ PCWSTR CommandLine,
+    _In_opt_ PCWSTR UserName,
+    _In_opt_ PCWSTR Password,
     _In_opt_ ULONG LogonType,
     _In_opt_ HANDLE ProcessIdWithToken,
     _In_opt_ ULONG SessionId,
-    _In_opt_ PWSTR DesktopName,
+    _In_opt_ PCWSTR DesktopName,
     _In_ BOOLEAN UseLinkedToken
     )
 {
-    return PhExecuteRunAsCommand3(hWnd, Program, UserName, Password, LogonType, ProcessIdWithToken, SessionId, DesktopName, UseLinkedToken, FALSE, FALSE);
+    return PhExecuteRunAsCommand3(WindowHandle, CommandLine, UserName, Password, LogonType, ProcessIdWithToken, SessionId, DesktopName, UseLinkedToken, FALSE, FALSE);
 }
 
 NTSTATUS PhExecuteRunAsCommand3(
-    _In_ HWND hWnd,
-    _In_ PWSTR Program,
-    _In_opt_ PWSTR UserName,
-    _In_opt_ PWSTR Password,
+    _In_ HWND WindowHandle,
+    _In_ PCWSTR CommandLine,
+    _In_opt_ PCWSTR UserName,
+    _In_opt_ PCWSTR Password,
     _In_opt_ ULONG LogonType,
     _In_opt_ HANDLE ProcessIdWithToken,
     _In_opt_ ULONG SessionId,
-    _In_opt_ PWSTR DesktopName,
+    _In_opt_ PCWSTR DesktopName,
     _In_ BOOLEAN UseLinkedToken,
     _In_ BOOLEAN CreateSuspendedProcess,
     _In_ BOOLEAN CreateUIAccessProcess
@@ -1583,11 +1580,11 @@ NTSTATUS PhExecuteRunAsCommand3(
     parameters.Password = Password;
     parameters.LogonType = LogonType;
     parameters.SessionId = SessionId;
-    parameters.CommandLine = Program;
+    parameters.CommandLine = CommandLine;
     parameters.DesktopName = DesktopName;
     parameters.UseLinkedToken = UseLinkedToken;
     parameters.CreateSuspendedProcess = CreateSuspendedProcess;
-    parameters.WindowHandle = hWnd;
+    parameters.WindowHandle = WindowHandle;
     parameters.CreateUIAccessProcess = CreateUIAccessProcess;
 
     // Try to use an existing instance of the service if possible.
@@ -1631,7 +1628,7 @@ NTSTATUS PhExecuteRunAsCommand3(
     }
     else
     {
-        if (PhUiConnectToPhSvc(hWnd, FALSE))
+        if (PhUiConnectToPhSvc(WindowHandle, FALSE))
         {
             status = PhSvcCallExecuteRunAsCommand(&parameters);
             PhUiDisconnectFromPhSvc();
@@ -1646,7 +1643,7 @@ NTSTATUS PhExecuteRunAsCommand3(
 }
 
 VOID PhpSplitUserName(
-    _In_ PWSTR UserName,
+    _In_ PCWSTR UserName,
     _Out_opt_ PPH_STRING *DomainPart,
     _Out_opt_ PPH_STRING *UserPart
     )
@@ -2374,7 +2371,7 @@ INT_PTR CALLBACK PhpRunFileWndProc(
 
             SetBkMode(hdc, TRANSPARENT);
 
-            return (INT_PTR)GetStockBrush(WHITE_BRUSH);
+            return (INT_PTR)PhGetStockBrush(WHITE_BRUSH);
         }
         break;
     case WM_COMMAND:
@@ -2463,11 +2460,11 @@ INT_PTR CALLBACK PhpRunFileWndProc(
             SetBkMode(hdc, TRANSPARENT);
 
             clientRect.bottom -= PhGetDpi(60, context->WindowDpi);
-            FillRect(hdc, &clientRect, PhEnableThemeSupport ? PhThemeWindowBackgroundBrush : GetSysColorBrush(COLOR_WINDOW));
+            FillRect(hdc, &clientRect, PhEnableThemeSupport ? PhThemeWindowBackgroundBrush : (HBRUSH)(COLOR_WINDOW + 1));
 
             clientRect.top = clientRect.bottom;
             clientRect.bottom = clientRect.top + PhGetDpi(60, context->WindowDpi);
-            FillRect(hdc, &clientRect, PhEnableThemeSupport ? PhThemeWindowBackgroundBrush : GetSysColorBrush(COLOR_3DFACE));
+            FillRect(hdc, &clientRect, PhEnableThemeSupport ? PhThemeWindowBackgroundBrush : (HBRUSH)(COLOR_3DFACE + 1));
 
             SetWindowLongPtr(hwndDlg, DWLP_MSGRESULT, TRUE);
         }
@@ -2504,7 +2501,7 @@ INT_PTR CALLBACK PhpRunFileWndProc(
 
                                     SetTextColor(customDraw->hdc, RGB(0, 0, 0));
                                     SetDCBrushColor(customDraw->hdc, RGB(0xff, 0xff, 0xff));
-                                    FillRect(customDraw->hdc, &customDraw->rc, GetStockBrush(DC_BRUSH));
+                                    FillRect(customDraw->hdc, &customDraw->rc, PhGetStockBrush(DC_BRUSH));
 
                                     if (buttonText = PhGetWindowText(customDraw->hdr.hwndFrom))
                                     {
@@ -2851,7 +2848,11 @@ BOOLEAN NTAPI PhRunAsPackageTreeNewCallback(
         return TRUE;
     case TreeNewSortChanged:
         {
-            TreeNew_GetSort(hwnd, &context->TreeNewSortColumn, &context->TreeNewSortOrder);
+            PPH_TREENEW_SORT_CHANGED_EVENT sorting = Parameter1;
+
+            context->TreeNewSortColumn = sorting->SortColumn;
+            context->TreeNewSortOrder = sorting->SortOrder;
+
             // Force a rebuild to sort the items.
             TreeNew_NodesStructured(hwnd);
         }
@@ -2865,10 +2866,6 @@ BOOLEAN NTAPI PhRunAsPackageTreeNewCallback(
             case 'C':
                 if (GetKeyState(VK_CONTROL) < 0)
                     SendMessage(context->WindowHandle, WM_COMMAND, ID_OBJECT_COPY, 0);
-                break;
-            case 'A':
-                if (GetKeyState(VK_CONTROL) < 0)
-                    TreeNew_SelectRange(context->TreeNewHandle, 0, -1);
                 break;
             case VK_DELETE:
                 SendMessage(context->WindowHandle, WM_COMMAND, ID_OBJECT_CLOSE, 0);

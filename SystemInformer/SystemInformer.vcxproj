@@ -83,7 +83,6 @@
     <PlatformToolset>v143</PlatformToolset>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>$(SolutionDir)bin\$(Configuration)$(PlatformArchitecture)\</LocalDebuggerWorkingDirectory>
-    <SpectreMitigation>false</SpectreMitigation>
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -120,11 +119,20 @@
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">$(SolutionDir)bin\$(Configuration)$(PlatformArchitecture)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">$(ProjectDir)obj\$(Configuration)$(PlatformArchitecture)\</IntDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;_PHLIB_;_PHAPP_;_WINDOWS;WIN32;_DEBUG;DEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_PHLIB_;_PHAPP_;_WINDOWS;WIN32;_DEBUG;DEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <CallingConvention>StdCall</CallingConvention>
@@ -138,6 +146,10 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
       <BuildStlModules>false</BuildStlModules>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <OmitFramePointers>true</OmitFramePointers>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <Link>
       <AdditionalDependencies>setupapi.lib;cfgmgr32.lib;aclui.lib;comctl32.lib;dnsapi.lib;noarg.obj;noenv.obj;ntdll.lib;phlib.lib;userenv.lib;wbemuuid.lib;windowscodecs.lib;winhttp.lib;winsta.lib;kphlib_um.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -158,16 +170,16 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -kph-sign $(OutDir)$(TargetName)$(TargetExt)
-        "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -sdk -$(Configuration) -$(PlatformName)
-      </Command>
+      "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -kph-sign "$(OutDir)$(TargetName)$(TargetExt)"
+      "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -sdk -$(Configuration) -$(PlatformName)
+       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;_PHLIB_;_PHAPP_;_WINDOWS;WIN64;_DEBUG;DEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_PHLIB_;_PHAPP_;_WINDOWS;WIN64;_DEBUG;DEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <CallingConvention>StdCall</CallingConvention>
@@ -181,6 +193,10 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
       <BuildStlModules>false</BuildStlModules>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <OmitFramePointers>true</OmitFramePointers>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <Link>
       <AdditionalDependencies>setupapi.lib;cfgmgr32.lib;aclui.lib;comctl32.lib;dnsapi.lib;noarg.obj;noenv.obj;ntdll.lib;phlib.lib;userenv.lib;wbemuuid.lib;windowscodecs.lib;winhttp.lib;winsta.lib;kphlib_um.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -201,8 +217,8 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -kph-sign $(OutDir)$(TargetName)$(TargetExt)
-        "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -sdk -$(Configuration) -$(PlatformName)
+      "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -kph-sign "$(OutDir)$(TargetName)$(TargetExt)"
+      "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -sdk -$(Configuration) -$(PlatformName)
       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -210,7 +226,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;_PHLIB_;_PHAPP_;_WINDOWS;WIN64;_DEBUG;DEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_PHLIB_;_PHAPP_;_WINDOWS;WIN64;_DEBUG;DEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <CallingConvention>StdCall</CallingConvention>
@@ -224,6 +240,10 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
       <BuildStlModules>false</BuildStlModules>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <OmitFramePointers>true</OmitFramePointers>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <Link>
       <AdditionalDependencies>setupapi.lib;cfgmgr32.lib;aclui.lib;comctl32.lib;dnsapi.lib;noarg.obj;noenv.obj;ntdll.lib;phlib.lib;userenv.lib;wbemuuid.lib;windowscodecs.lib;winhttp.lib;winsta.lib;kphlib_um.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -244,8 +264,8 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -kph-sign $(OutDir)$(TargetName)$(TargetExt)
-        "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -sdk -$(Configuration) -$(PlatformName)
+      "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -kph-sign "$(OutDir)$(TargetName)$(TargetExt)"
+      "$(SolutionDir)tools\CustomBuildTool\bin\Release\$(PROCESSOR_ARCHITECTURE)\CustomBuildTool.exe" -sdk -$(Configuration) -$(PlatformName)
       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -254,7 +274,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;_PHLIB_;_PHAPP_;_WINDOWS;WIN32;NDEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_PHLIB_;_PHAPP_;_WINDOWS;WIN32;NDEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -263,7 +283,6 @@
       <CallingConvention>StdCall</CallingConvention>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
       <SDLCheck>true</SDLCheck>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <IntelJCCErratum>true</IntelJCCErratum>
@@ -271,7 +290,12 @@
       <LanguageStandard_C Condition="'$(MSBuildVersion)' &lt; '17.11'">stdc17</LanguageStandard_C>
       <LanguageStandard_C Condition="'$(MSBuildVersion)' &gt;= '17.11'">stdclatest</LanguageStandard_C>
       <AdditionalOptions>/utf-8 /d1nodatetime %(AdditionalOptions)</AdditionalOptions>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <OmitFramePointers>true</OmitFramePointers>
       <BuildStlModules>false</BuildStlModules>
+      <BuildStlModules>false</BuildStlModules>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <AdditionalDependencies>setupapi.lib;cfgmgr32.lib;aclui.lib;comctl32.lib;dnsapi.lib;noarg.obj;noenv.obj;ntdll.lib;phlib.lib;userenv.lib;wbemuuid.lib;windowscodecs.lib;winhttp.lib;winsta.lib;kphlib_um.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -307,7 +331,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;_PHLIB_;_PHAPP_;_WINDOWS;WIN64;NDEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_PHLIB_;_PHAPP_;_WINDOWS;WIN64;NDEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -325,6 +349,10 @@
       <AdditionalOptions>/utf-8 /d1nodatetime /guard:xfg %(AdditionalOptions)</AdditionalOptions>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <BuildStlModules>false</BuildStlModules>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <OmitFramePointers>true</OmitFramePointers>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <AdditionalDependencies>setupapi.lib;cfgmgr32.lib;aclui.lib;comctl32.lib;dnsapi.lib;noarg.obj;noenv.obj;ntdll.lib;phlib.lib;userenv.lib;wbemuuid.lib;windowscodecs.lib;winhttp.lib;winsta.lib;kphlib_um.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -360,7 +388,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(SolutionDir)phnt\include;$(SolutionDir)phlib\include;$(SolutionDir)kphlib\include;include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PHNT_VERSION=61;_PHLIB_;_PHAPP_;_WINDOWS;WIN64;NDEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_PHLIB_;_PHAPP_;_WINDOWS;WIN64;NDEBUG;%(PreprocessorDefinitions);$(ExternalCompilerOptions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -377,6 +405,10 @@
       <GuardSignedReturns>true</GuardSignedReturns>
       <CallingConvention>StdCall</CallingConvention>
       <BuildStlModules>false</BuildStlModules>
+      <UseStandardPreprocessor>true</UseStandardPreprocessor>
+      <OmitFramePointers>true</OmitFramePointers>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <AdditionalDependencies>setupapi.lib;cfgmgr32.lib;aclui.lib;comctl32.lib;dnsapi.lib;noarg.obj;noenv.obj;ntdll.lib;phlib.lib;userenv.lib;wbemuuid.lib;windowscodecs.lib;winhttp.lib;winsta.lib;kphlib_um.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -437,6 +469,7 @@
     <ClCompile Include="jobprp.c" />
     <ClCompile Include="kdump.c" />
     <ClCompile Include="ksidbg.c" />
+    <ClCompile Include="informer.c" />
     <ClCompile Include="memmod.c" />
     <ClCompile Include="ksisup.c" />
     <ClCompile Include="ksyscall.c" />
@@ -526,6 +559,7 @@
     <ClInclude Include="include\hndllist.h" />
     <ClInclude Include="include\hndlmenu.h" />
     <ClInclude Include="include\hndlprv.h" />
+    <ClInclude Include="include\informer.h" />
     <ClInclude Include="include\ksisup.h" />
     <ClInclude Include="include\mainwnd.h" />
     <ClInclude Include="include\mainwndp.h" />
@@ -584,6 +618,7 @@
   <ItemGroup>
     <ResourceCompile Include="SystemInformer.rc" />
     <ResourceCompile Include="version.rc" />
+    <ResourceCompile Include="..\kphlib\include\sistatus.rc" />
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="SystemInformer.manifest" />

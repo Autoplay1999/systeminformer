@@ -20,8 +20,7 @@
 #include <actions.h>
 #include <phappres.h>
 #include <phsvccl.h>
-
-#include "../tools/thirdparty/pcre/pcre2.h"
+#include <thirdparty.h>
 
 /**
  * Determines whether a process is suspended.
@@ -783,7 +782,7 @@ PPH_STRING PhUnescapeStringForDelimiter(
 
 VOID PhSearchOnlineString(
     _In_ HWND WindowHandle,
-    _In_ PWSTR String
+    _In_ PCWSTR String
     )
 {
     PhShellExecuteUserString(WindowHandle, L"SearchEngine", String, TRUE, NULL);
@@ -791,10 +790,10 @@ VOID PhSearchOnlineString(
 
 VOID PhShellExecuteUserString(
     _In_ HWND WindowHandle,
-    _In_ PWSTR Setting,
-    _In_ PWSTR String,
+    _In_ PCWSTR Setting,
+    _In_ PCWSTR String,
     _In_ BOOLEAN UseShellExecute,
-    _In_opt_ PWSTR ErrorMessage
+    _In_opt_ PCWSTR ErrorMessage
     )
 {
     static PH_STRINGREF replacementToken = PH_STRINGREF_INIT(L"%s");
@@ -1062,7 +1061,7 @@ BOOLEAN PhGetListViewContextMenuPoint(
     _Out_ PPOINT Point
     )
 {
-    INT selectedIndex;
+    LONG selectedIndex;
     RECT bounds;
     RECT clientRect;
 
@@ -1232,7 +1231,7 @@ VOID PhWritePhTextHeader(
 
 NTSTATUS PhShellProcessHacker(
     _In_opt_ HWND WindowHandle,
-    _In_opt_ PWSTR Parameters,
+    _In_opt_ PCWSTR Parameters,
     _In_ ULONG ShowWindowType,
     _In_ ULONG Flags,
     _In_ ULONG AppFlags,
@@ -1271,8 +1270,8 @@ VOID PhpAppendCommandLineArgument(
 
 NTSTATUS PhShellProcessHackerEx(
     _In_opt_ HWND WindowHandle,
-    _In_opt_ PWSTR FileName,
-    _In_opt_ PWSTR Parameters,
+    _In_opt_ PCWSTR FileName,
+    _In_opt_ PCWSTR Parameters,
     _In_ ULONG ShowWindowType,
     _In_ ULONG Flags,
     _In_ ULONG AppFlags,
@@ -1283,7 +1282,7 @@ NTSTATUS PhShellProcessHackerEx(
     NTSTATUS status;
     PPH_STRING applicationFileName;
     PH_STRING_BUILDER sb;
-    PWSTR parameters;
+    PCWSTR parameters;
 
     if (!(applicationFileName = PhGetApplicationFileNameWin32()))
         return FALSE;
@@ -1397,8 +1396,8 @@ NTSTATUS PhShellProcessHackerEx(
 }
 
 BOOLEAN PhCreateProcessIgnoreIfeoDebugger(
-    _In_ PWSTR FileName,
-    _In_opt_ PWSTR CommandLine
+    _In_ PCWSTR FileName,
+    _In_opt_ PCWSTR CommandLine
     )
 {
     BOOLEAN result;
@@ -1407,10 +1406,10 @@ BOOLEAN PhCreateProcessIgnoreIfeoDebugger(
 
     result = FALSE;
 
-    RtlEnterCriticalSection(NtCurrentPeb()->FastPebLock);
+    RtlAcquirePebLock();
     originalValue = NtCurrentPeb()->ReadImageFileExecOptions;
     NtCurrentPeb()->ReadImageFileExecOptions = FALSE;
-    RtlLeaveCriticalSection(NtCurrentPeb()->FastPebLock);
+    RtlReleasePebLock();
 
     // The combination of ReadImageFileExecOptions = FALSE and the DEBUG_PROCESS flag
     // allows us to skip the Debugger IFEO value. (wj32)
@@ -1454,9 +1453,9 @@ BOOLEAN PhCreateProcessIgnoreIfeoDebugger(
 
     if (originalValue)
     {
-        RtlEnterCriticalSection(NtCurrentPeb()->FastPebLock);
+        RtlAcquirePebLock();
         NtCurrentPeb()->ReadImageFileExecOptions = originalValue;
-        RtlLeaveCriticalSection(NtCurrentPeb()->FastPebLock);
+        RtlReleasePebLock();
     }
 
     return result;
@@ -1792,7 +1791,10 @@ VOID PhApplyTreeNewFilters(
         }
     }
 
-    TreeNew_NodesStructured(Support->TreeNewHandle);
+    if (Support->NodeList->Count)
+    {
+        TreeNew_NodesStructured(Support->TreeNewHandle);
+    }
 }
 
 VOID NTAPI PhpCopyCellEMenuItemDeleteFunction(
@@ -2273,7 +2275,7 @@ CleanupExit:
 }
 
 PPH_STRING PhPcre2GetErrorMessage(
-    _In_ INT ErrorCode
+    _In_ LONG ErrorCode
     )
 {
     PPH_STRING buffer;

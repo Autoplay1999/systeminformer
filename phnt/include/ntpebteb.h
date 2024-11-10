@@ -101,6 +101,121 @@ typedef struct _TELEMETRY_COVERAGE_HEADER
     ULONG HashTable[ANYSIZE_ARRAY];
 } TELEMETRY_COVERAGE_HEADER, *PTELEMETRY_COVERAGE_HEADER;
 
+typedef struct _WER_RECOVERY_INFO
+{
+    ULONG Length;
+    PVOID Callback;
+    PVOID Parameter;
+    HANDLE Started;
+    HANDLE Finished;
+    HANDLE InProgress;
+    LONG LastError;
+    BOOL Successful;
+    ULONG PingInterval;
+    ULONG Flags;
+} WER_RECOVERY_INFO, *PWER_RECOVERY_INFO;
+
+typedef struct _WER_FILE
+{
+    USHORT Flags;
+    WCHAR Path[MAX_PATH];
+} WER_FILE, *PWER_FILE;
+
+typedef struct _WER_MEMORY
+{
+    PVOID Address;
+    ULONG Size;
+} WER_MEMORY, *PWER_MEMORY;
+
+typedef struct _WER_GATHER
+{
+    PVOID Next;
+    USHORT Flags;    
+    union
+    {
+      WER_FILE File;
+      WER_MEMORY Memory;
+    } v;
+} WER_GATHER, *PWER_GATHER;
+
+typedef struct _WER_METADATA
+{
+    PVOID Next;
+    WCHAR Key[64];
+    WCHAR Value[128];
+} WER_METADATA, *PWER_METADATA;
+
+typedef struct _WER_RUNTIME_DLL
+{
+    PVOID Next;
+    ULONG Length;
+    PVOID Context;
+    WCHAR CallbackDllPath[MAX_PATH];
+} WER_RUNTIME_DLL, *PWER_RUNTIME_DLL;
+
+typedef struct _WER_DUMP_COLLECTION
+{
+    PVOID Next;
+    ULONG ProcessId;
+    ULONG ThreadId;
+} WER_DUMP_COLLECTION, *PWER_DUMP_COLLECTION;
+
+typedef struct _WER_HEAP_MAIN_HEADER
+{
+    WCHAR Signature[16];
+    LIST_ENTRY Links;
+    HANDLE Mutex;
+    PVOID FreeHeap;
+    ULONG FreeCount;
+} WER_HEAP_MAIN_HEADER, *PWER_HEAP_MAIN_HEADER;
+
+#ifndef RESTART_MAX_CMD_LINE
+#define RESTART_MAX_CMD_LINE 1024
+#endif
+
+typedef struct _WER_PEB_HEADER_BLOCK
+{
+    LONG Length;
+    WCHAR Signature[16];
+    WCHAR AppDataRelativePath[64];
+    WCHAR RestartCommandLine[RESTART_MAX_CMD_LINE];
+    WER_RECOVERY_INFO RecoveryInfo;
+    PWER_GATHER Gather;
+    PWER_METADATA MetaData;
+    PWER_RUNTIME_DLL RuntimeDll;
+    PWER_DUMP_COLLECTION DumpCollection;
+    LONG GatherCount;
+    LONG MetaDataCount;
+    LONG DumpCount;
+    LONG Flags;
+    WER_HEAP_MAIN_HEADER MainHeader;
+    PVOID Reserved;
+} WER_PEB_HEADER_BLOCK, *PWER_PEB_HEADER_BLOCK;
+
+#define GDI_HANDLE_BUFFER_SIZE32 34
+#define GDI_HANDLE_BUFFER_SIZE64 60
+
+#ifndef _WIN64
+#define GDI_HANDLE_BUFFER_SIZE GDI_HANDLE_BUFFER_SIZE32
+#else
+#define GDI_HANDLE_BUFFER_SIZE GDI_HANDLE_BUFFER_SIZE64
+#endif
+
+typedef ULONG GDI_HANDLE_BUFFER[GDI_HANDLE_BUFFER_SIZE];
+
+typedef ULONG GDI_HANDLE_BUFFER32[GDI_HANDLE_BUFFER_SIZE32];
+typedef ULONG GDI_HANDLE_BUFFER64[GDI_HANDLE_BUFFER_SIZE64];
+
+#ifndef FLS_MAXIMUM_AVAILABLE
+#define FLS_MAXIMUM_AVAILABLE 128
+#endif
+#ifndef TLS_MINIMUM_AVAILABLE
+#define TLS_MINIMUM_AVAILABLE 64
+#endif
+#ifndef TLS_EXPANSION_SLOTS
+#define TLS_EXPANSION_SLOTS 1024
+#endif
+
 // symbols
 typedef struct _PEB
 {
@@ -155,6 +270,7 @@ typedef struct _PEB
         PVOID KernelCallbackTable;
         PVOID UserSharedInfoPtr;
     };
+
     ULONG SystemReserved;
     ULONG AtlThunkSListPtr32;
     PAPI_SET_NAMESPACE ApiSetMap;
@@ -232,7 +348,7 @@ typedef struct _PEB
     USHORT UseCaseMapping;
     USHORT UnusedNlsField;
 
-    PVOID WerRegistrationData;
+    PWER_PEB_HEADER_BLOCK WerRegistrationData;
     PVOID WerShipAssertPtr;
 
     union

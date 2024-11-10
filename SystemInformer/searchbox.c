@@ -14,8 +14,7 @@
 #include <settings.h>
 #include <vssym32.h>
 #include <emenu.h>
-
-#include "../tools/thirdparty/pcre/pcre2.h"
+#include <thirdparty.h>
 
 typedef struct _PH_SEARCHCONTROL_BUTTON
 {
@@ -54,6 +53,7 @@ typedef struct _PH_SEARCHCONTROL_CONTEXT
     };
 
     HWND ParentWindowHandle;
+    HWND PreviousFocusWindowHandle;
     LONG WindowDpi;
 
     PH_SEARCHCONTROL_BUTTON SearchButton;
@@ -61,9 +61,9 @@ typedef struct _PH_SEARCHCONTROL_CONTEXT
     PH_SEARCHCONTROL_BUTTON CaseButton;
 
     LONG ButtonWidth;
-    INT BorderSize;
-    INT ImageWidth;
-    INT ImageHeight;
+    LONG BorderSize;
+    LONG ImageWidth;
+    LONG ImageHeight;
     WNDPROC DefaultWindowProc;
     HFONT WindowFont;
     HIMAGELIST ImageListHandle;
@@ -74,7 +74,7 @@ typedef struct _PH_SEARCHCONTROL_CONTEXT
     HBITMAP BufferedBitmap;
     RECT BufferedContextRect;
 
-    HBRUSH DCBrush;
+    HBRUSH FrameBrush;
     HBRUSH WindowBrush;
 
     PPH_SEARCHCONTROL_CALLBACK Callback;
@@ -82,7 +82,7 @@ typedef struct _PH_SEARCHCONTROL_CONTEXT
 
     PPH_STRING SearchboxText;
     ULONG64 SearchPointer;
-    INT SearchboxRegexError;
+    LONG SearchboxRegexError;
     PCRE2_SIZE SearchboxRegexErrorOffset;
     pcre2_code* SearchboxRegexCode;
     pcre2_match_data* SearchboxRegexMatchData;
@@ -160,7 +160,7 @@ VOID PhpSearchControlInitializeTheme(
 
     Context->ButtonWidth = PhGetDpi(20, Context->WindowDpi);
     Context->BorderSize = borderSize;
-    Context->DCBrush = GetStockBrush(DC_BRUSH);
+    Context->FrameBrush = GetSysColorBrush(COLOR_WINDOWFRAME);
     Context->WindowBrush = GetSysColorBrush(COLOR_WINDOW);
 
     if (PhIsThemeActive())
@@ -369,7 +369,7 @@ VOID PhpSearchControlThemeChanged(
     PhpSearchControlInitializeImages(Context, WindowHandle);
 
     // Reset the client area margins.
-    SendMessage(WindowHandle, EM_SETMARGINS, EC_LEFTMARGIN, MAKELPARAM(0, 0));
+    CallWindowProc(Context->DefaultWindowProc, WindowHandle, EM_SETMARGINS, EC_LEFTMARGIN, MAKELPARAM(0, 0));
 
     // Refresh the non-client area.
     SetWindowPos(WindowHandle, NULL, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
@@ -390,14 +390,14 @@ VOID PhpSearchDrawWindow(
         if (GetFocus() == WindowHandle)
         {
             SetDCBrushColor(Hdc, RGB(65, 65, 65));
-            SelectBrush(Hdc, Context->DCBrush);
+            SelectBrush(Hdc, PhGetStockBrush(DC_BRUSH));
             PatBlt(Hdc, WindowRect.left, WindowRect.top, 1, WindowRect.bottom - WindowRect.top, PATCOPY);
             PatBlt(Hdc, WindowRect.right - 1, WindowRect.top, 1, WindowRect.bottom - WindowRect.top, PATCOPY);
             PatBlt(Hdc, WindowRect.left, WindowRect.top, WindowRect.right - WindowRect.left, 1, PATCOPY);
             PatBlt(Hdc, WindowRect.left, WindowRect.bottom - 1, WindowRect.right - WindowRect.left, 1, PATCOPY);
 
             SetDCBrushColor(Hdc, RGB(60, 60, 60));
-            SelectBrush(Hdc, Context->DCBrush);
+            SelectBrush(Hdc, PhGetStockBrush(DC_BRUSH));
             PatBlt(Hdc, WindowRect.left + 1, WindowRect.top + 1, 1, WindowRect.bottom - WindowRect.top - 2, PATCOPY);
             PatBlt(Hdc, WindowRect.right - 2, WindowRect.top + 1, 1, WindowRect.bottom - WindowRect.top - 2, PATCOPY);
             PatBlt(Hdc, WindowRect.left + 1, WindowRect.top + 1, WindowRect.right - WindowRect.left - 2, 1, PATCOPY);
@@ -406,14 +406,14 @@ VOID PhpSearchDrawWindow(
         else
         {
             SetDCBrushColor(Hdc, RGB(65, 65, 65));
-            SelectBrush(Hdc, Context->DCBrush);
+            SelectBrush(Hdc, PhGetStockBrush(DC_BRUSH));
             PatBlt(Hdc, WindowRect.left, WindowRect.top, 1, WindowRect.bottom - WindowRect.top, PATCOPY);
             PatBlt(Hdc, WindowRect.right - 1, WindowRect.top, 1, WindowRect.bottom - WindowRect.top, PATCOPY);
             PatBlt(Hdc, WindowRect.left, WindowRect.top, WindowRect.right - WindowRect.left, 1, PATCOPY);
             PatBlt(Hdc, WindowRect.left, WindowRect.bottom - 1, WindowRect.right - WindowRect.left, 1, PATCOPY);
 
             SetDCBrushColor(Hdc, RGB(60, 60, 60));
-            SelectBrush(Hdc, Context->DCBrush);
+            SelectBrush(Hdc, PhGetStockBrush(DC_BRUSH));
             PatBlt(Hdc, WindowRect.left + 1, WindowRect.top + 1, 1, WindowRect.bottom - WindowRect.top - 2, PATCOPY);
             PatBlt(Hdc, WindowRect.right - 2, WindowRect.top + 1, 1, WindowRect.bottom - WindowRect.top - 2, PATCOPY);
             PatBlt(Hdc, WindowRect.left + 1, WindowRect.top + 1, WindowRect.right - WindowRect.left - 2, 1, PATCOPY);
@@ -439,12 +439,12 @@ VOID PhpSearchDrawButton(
         if (PhEnableThemeSupport)
         {
             SetDCBrushColor(Hdc, RGB(99, 99, 99));
-            FillRect(Hdc, &buttonRect, Context->DCBrush);
+            FillRect(Hdc, &buttonRect, PhGetStockBrush(DC_BRUSH));
         }
         else
         {
             SetDCBrushColor(Hdc, RGB(153, 209, 255));
-            FillRect(Hdc, &buttonRect, Context->DCBrush);
+            FillRect(Hdc, &buttonRect, PhGetStockBrush(DC_BRUSH));
         }
     }
     else if (Button->Hot)
@@ -454,12 +454,12 @@ VOID PhpSearchDrawButton(
             if (PhEnableThemeSupport)
             {
                 SetDCBrushColor(Hdc, RGB(54, 54, 54));
-                FillRect(Hdc, &buttonRect, Context->DCBrush);
+                FillRect(Hdc, &buttonRect, PhGetStockBrush(DC_BRUSH));
             }
             else
             {
                 SetDCBrushColor(Hdc, RGB(133, 199, 255));
-                FillRect(Hdc, &buttonRect, Context->DCBrush);
+                FillRect(Hdc, &buttonRect, PhGetStockBrush(DC_BRUSH));
             }
         }
         else
@@ -467,12 +467,12 @@ VOID PhpSearchDrawButton(
             if (PhEnableThemeSupport)
             {
                 SetDCBrushColor(Hdc, RGB(78, 78, 78));
-                FillRect(Hdc, &buttonRect, Context->DCBrush);
+                FillRect(Hdc, &buttonRect, PhGetStockBrush(DC_BRUSH));
             }
             else
             {
                 SetDCBrushColor(Hdc, RGB(205, 232, 255));
-                FillRect(Hdc, &buttonRect, Context->DCBrush);
+                FillRect(Hdc, &buttonRect, PhGetStockBrush(DC_BRUSH));
             }
         }
     }
@@ -481,12 +481,12 @@ VOID PhpSearchDrawButton(
         if (PhEnableThemeSupport)
         {
             SetDCBrushColor(Hdc, RGB(100, 28, 30));
-            FillRect(Hdc, &buttonRect, Context->DCBrush);
+            FillRect(Hdc, &buttonRect, PhGetStockBrush(DC_BRUSH));
         }
         else
         {
             SetDCBrushColor(Hdc, RGB(255, 155, 155));
-            FillRect(Hdc, &buttonRect, Context->DCBrush);
+            FillRect(Hdc, &buttonRect, PhGetStockBrush(DC_BRUSH));
         }
     }
     else if (Button->Active && Button->ActiveImageIndex == ULONG_MAX)
@@ -494,12 +494,12 @@ VOID PhpSearchDrawButton(
         if (PhEnableThemeSupport)
         {
             SetDCBrushColor(Hdc, RGB(44, 44, 44));
-            FillRect(Hdc, &buttonRect, Context->DCBrush);
+            FillRect(Hdc, &buttonRect, PhGetStockBrush(DC_BRUSH));
         }
         else
         {
             SetDCBrushColor(Hdc, RGB(123, 189, 255));
-            FillRect(Hdc, &buttonRect, Context->DCBrush);
+            FillRect(Hdc, &buttonRect, PhGetStockBrush(DC_BRUSH));
         }
     }
     else
@@ -507,7 +507,7 @@ VOID PhpSearchDrawButton(
         if (PhEnableThemeSupport)
         {
             SetDCBrushColor(Hdc, RGB(60, 60, 60));
-            FillRect(Hdc, &buttonRect, Context->DCBrush);
+            FillRect(Hdc, &buttonRect, PhGetStockBrush(DC_BRUSH));
         }
         else
         {
@@ -601,14 +601,17 @@ BOOLEAN PhpSearchUpdateText(
     PPH_STRING newSearchboxText;
     ULONG_PTR matchHandle;
 
-    newSearchboxText = PH_AUTO(PhGetWindowText(hWnd));
+    newSearchboxText = PhGetWindowText(hWnd);
 
     Context->SearchButton.Active = (newSearchboxText->Length > 0);
 
     if (!Force && PhEqualString(newSearchboxText, Context->SearchboxText, FALSE))
+    {
+        PhDereferenceObject(newSearchboxText);
         return FALSE;
+    }
 
-    PhSwapReference(&Context->SearchboxText, newSearchboxText);
+    PhMoveReference(&Context->SearchboxText, newSearchboxText);
 
     Context->UseSearchPointer = PhStringToInteger64(&newSearchboxText->sr, 0, &Context->SearchPointer);
 
@@ -627,6 +630,17 @@ BOOLEAN PhpSearchUpdateText(
     Context->Callback(matchHandle, Context->CallbackContext);
 
     return TRUE;
+}
+
+void PhpSearchRestoreFocus(
+    _In_ PPH_SEARCHCONTROL_CONTEXT Context
+    )
+{
+    if (Context->PreviousFocusWindowHandle)
+    {
+        SetFocus(Context->PreviousFocusWindowHandle);
+        Context->PreviousFocusWindowHandle = NULL;
+    }
 }
 
 LRESULT CALLBACK PhpSearchWndSubclassProc(
@@ -669,7 +683,11 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
                 context->CueBannerText = NULL;
             }
 
-            PhDereferenceObject(context->SearchboxText);
+            if (context->SearchboxText)
+            {
+                PhDereferenceObject(context->SearchboxText);
+                context->SearchboxText = NULL;
+            }
 
             if (context->SearchboxRegexCode)
             {
@@ -767,12 +785,12 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
                     if (PhEnableThemeSupport)
                     {
                         SetDCBrushColor(context->BufferedDc, RGB(0x8f, 0x8f, 0x8f));
-                        FrameRect(context->BufferedDc, &windowRect, context->DCBrush);
+                        FrameRect(context->BufferedDc, &windowRect, PhGetStockBrush(DC_BRUSH));
                     }
                     else
                     {
                         SetDCBrushColor(context->BufferedDc, RGB(43, 43, 43));
-                        FrameRect(context->BufferedDc, &windowRect, context->DCBrush);
+                        FrameRect(context->BufferedDc, &windowRect, PhGetStockBrush(DC_BRUSH));
                     }
 
                     PhInflateRect(&windowRect, -1, -1);
@@ -780,7 +798,7 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
                 }
                 else
                 {
-                    FrameRect(context->BufferedDc, &windowRect, GetSysColorBrush(COLOR_WINDOWFRAME));
+                    FrameRect(context->BufferedDc, &windowRect, context->FrameBrush);
                     PhInflateRect(&windowRect, -1, -1);
                     FrameRect(context->BufferedDc, &windowRect, context->WindowBrush);
                 }
@@ -915,13 +933,12 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
             ULONG selStart;
             ULONG selEnd;
 
-            SendMessage(hWnd, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
-
             windowPoint.x = GET_X_LPARAM(lParam);
             windowPoint.y = GET_Y_LPARAM(lParam);
 
-            menu = PhCreateEMenu();
+            CallWindowProc(oldWndProc, hWnd, EM_GETSEL, (WPARAM)&selStart, (LPARAM)&selEnd);
 
+            menu = PhCreateEMenu();
             PhInsertEMenuItem(menu, PhCreateEMenuItem(0, IDC_UNDO, L"Undo", NULL, NULL), ULONG_MAX);
             PhInsertEMenuItem(menu, PhCreateEMenuSeparator(), ULONG_MAX);
             PhInsertEMenuItem(menu, PhCreateEMenuItem(0, IDC_CUT, L"Cut", NULL, NULL), ULONG_MAX);
@@ -949,13 +966,13 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
 
             if (item)
             {
-                PPH_STRING text = PH_AUTO(PhGetWindowText(hWnd));
+                PPH_STRING text = PhGetWindowText(hWnd);
 
                 switch (item->Id)
                 {
                     case IDC_UNDO:
                         {
-                            SendMessage(hWnd, EM_UNDO, 0, 0);
+                            CallWindowProc(oldWndProc, hWnd, EM_UNDO, 0, 0);
                             PhpSearchUpdateText(hWnd, context, FALSE);
                         }
                         break;
@@ -996,9 +1013,13 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
                         }
                         break;
                     case IDC_SELECTALL:
-                        SendMessage(hWnd, EM_SETSEL, 0, -1);
+                        {
+                            CallWindowProc(oldWndProc, hWnd, EM_SETSEL, 0, -1);
+                        }
                         break;
                 }
+
+                PhDereferenceObject(text);
             }
 
             PhDestroyEMenu(menu);
@@ -1014,6 +1035,9 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
         __fallthrough;
     case WM_KILLFOCUS:
         RedrawWindow(hWnd, NULL, NULL, RDW_FRAME | RDW_INVALIDATE);
+        break;
+    case WM_SETFOCUS:
+        context->PreviousFocusWindowHandle = (HWND)wParam;
         break;
     case WM_SETTINGCHANGE:
     case WM_SYSCOLORCHANGE:
@@ -1110,9 +1134,10 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
                 return CallWindowProc(oldWndProc, hWnd, uMsg, wParam, lParam);
             }
 
-            HDC hdc = (HDC)wParam ? (HDC)wParam : GetDC(hWnd);
+            PAINTSTRUCT paintStruct;
+            HDC hdc;
 
-            if (hdc)
+            if (hdc = BeginPaint(hWnd, &paintStruct))
             {
                 HDC bufferDc;
                 RECT clientRect;
@@ -1132,7 +1157,7 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
                 {
                     SetTextColor(bufferDc, RGB(170, 170, 170));
                     SetDCBrushColor(bufferDc, RGB(60, 60, 60));
-                    FillRect(bufferDc, &clientRect, context->DCBrush);
+                    FillRect(bufferDc, &clientRect, PhGetStockBrush(DC_BRUSH));
                 }
                 else
                 {
@@ -1157,25 +1182,20 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
                 DeleteBitmap(bufferBitmap);
                 DeleteDC(bufferDc);
 
-                if (!(HDC)wParam)
-                {
-                    ReleaseDC(hWnd, hdc);
-                }
+                EndPaint(hWnd, &paintStruct);
             }
-
-            return DefWindowProc(hWnd, uMsg, wParam, lParam);
         }
-        break;
+        return 0;
     case WM_KEYDOWN:
         {
             // Delete previous word for ctrl+backspace (thanks to Katayama Hirofumi MZ) (modified) (dmex)
             if (wParam == VK_BACK && GetAsyncKeyState(VK_CONTROL) < 0)
             {
-                INT textStart = 0;
-                INT textEnd = 0;
-                INT textLength;
+                LONG textStart = 0;
+                LONG textEnd = 0;
+                LONG textLength;
 
-                textLength = (INT)CallWindowProc(oldWndProc, hWnd, WM_GETTEXTLENGTH, 0, 0);
+                textLength = (LONG)CallWindowProc(oldWndProc, hWnd, WM_GETTEXTLENGTH, 0, 0);
                 CallWindowProc(oldWndProc, hWnd, EM_GETSEL, (WPARAM)&textStart, (LPARAM)&textEnd);
 
                 if (textLength > 0 && textStart == textEnd)
@@ -1206,6 +1226,20 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
                     }
                 }
             }
+            // Clear search and restore focus for esc key
+            else if (wParam == VK_ESCAPE)
+            {
+                PhSetWindowText(hWnd, L"");
+                PhpSearchUpdateText(hWnd, context, FALSE);
+                PhpSearchRestoreFocus(context);
+                return 1;
+            }
+            // Up/down arrows will just restore previous focus without clearing search
+            else if (wParam == VK_DOWN || wParam == VK_UP)
+            {
+                PhpSearchRestoreFocus(context);
+                return 1;
+            }
         }
         break;
     case WM_CHAR:
@@ -1213,6 +1247,13 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
             // Delete previous word for ctrl+backspace (dmex)
             if (wParam == VK_F16 && GetAsyncKeyState(VK_CONTROL) < 0)
                 return 1;
+        }
+        break;
+    case WM_GETDLGCODE:
+        {
+            // Intercept esc key (otherwise it would get sent to parent window)
+            if (wParam == VK_ESCAPE && ((MSG*)lParam)->message == WM_KEYDOWN)
+                return DLGC_WANTMESSAGE;
         }
         break;
     case EM_SETCUEBANNER:
@@ -1232,7 +1273,7 @@ LRESULT CALLBACK PhpSearchWndSubclassProc(
 VOID PhCreateSearchControl(
     _In_ HWND ParentWindowHandle,
     _In_ HWND WindowHandle,
-    _In_opt_ PWSTR BannerText,
+    _In_opt_ PCWSTR BannerText,
     _In_ PPH_SEARCHCONTROL_CALLBACK Callback,
     _In_opt_ PVOID Context
     )
@@ -1304,7 +1345,7 @@ BOOLEAN PhSearchControlMatch(
 
 BOOLEAN PhSearchControlMatchZ(
     _In_ ULONG_PTR MatchHandle,
-    _In_ PWSTR Text
+    _In_ PCWSTR Text
     )
 {
     PH_STRINGREF text;
@@ -1316,7 +1357,7 @@ BOOLEAN PhSearchControlMatchZ(
 
 BOOLEAN PhSearchControlMatchLongHintZ(
     _In_ ULONG_PTR MatchHandle,
-    _In_ PWSTR Text
+    _In_ PCWSTR Text
     )
 {
     PH_STRINGREF text;

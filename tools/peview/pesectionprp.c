@@ -49,7 +49,7 @@ typedef struct _PV_SECTION_NODE
     PVOID RvaEnd;
     ULONG RvaSize;
     ULONG Characteristics;
-    DOUBLE SectionEntropy;
+    FLOAT SectionEntropy;
     PPH_STRING UniqueIdString;
     PPH_STRING SectionNameString;
     PPH_STRING RawStartString;
@@ -324,7 +324,7 @@ NTSTATUS PvpPeSectionsEnumerateThread(
 
             __try
             {
-                DOUBLE imageSectionEntropy;
+                FLOAT imageSectionEntropy;
 
                 if (imageSectionData = PhMappedImageRvaToVa(&PvMappedImage, PvMappedImage.Sections[i].VirtualAddress, NULL))
                 {
@@ -666,7 +666,16 @@ INT_PTR CALLBACK PvPeSectionsDlgProc(
             SetBkMode((HDC)wParam, TRANSPARENT);
             SetTextColor((HDC)wParam, RGB(0, 0, 0));
             SetDCBrushColor((HDC)wParam, RGB(255, 255, 255));
-            return (INT_PTR)GetStockBrush(DC_BRUSH);
+            return (INT_PTR)PhGetStockBrush(DC_BRUSH);
+        }
+        break;
+    case WM_KEYDOWN:
+        {
+            if (LOWORD(wParam) == 'K' && GetKeyState(VK_CONTROL) < 0)
+            {
+                SetFocus(context->SearchHandle);
+                return TRUE;
+            }
         }
         break;
     }
@@ -1138,7 +1147,11 @@ BOOLEAN NTAPI PvSectionTreeNewCallback(
         return TRUE;
     case TreeNewSortChanged:
         {
-            TreeNew_GetSort(hwnd, &context->TreeNewSortColumn, &context->TreeNewSortOrder);
+            PPH_TREENEW_SORT_CHANGED_EVENT sorting = Parameter1;
+
+            context->TreeNewSortColumn = sorting->SortColumn;
+            context->TreeNewSortOrder = sorting->SortOrder;
+
             TreeNew_NodesStructured(hwnd);
         }
         return TRUE;

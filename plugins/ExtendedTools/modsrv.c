@@ -116,16 +116,16 @@ ULONG PhpQueryModuleServiceReferences(
 
     if (namesReferencingModule.OutParams.pmszNames)
     {
-        PWSTR serviceName;
+        PCWSTR serviceName;
         PPH_SERVICE_ITEM serviceItem;
 
         for (serviceName = namesReferencingModule.OutParams.pmszNames; *serviceName; serviceName += PhCountStringZ(serviceName) + 1)
         {
-            if (serviceItem = PhReferenceServiceItem(serviceName))
+            if (serviceItem = PhReferenceServiceItemZ(serviceName))
                 PhAddItemList(serviceList, serviceItem);
         }
 
-        LocalFree(namesReferencingModule.OutParams.pmszNames);
+        LocalFree((HLOCAL)namesReferencingModule.OutParams.pmszNames);
     }
 
     if (ServiceList)

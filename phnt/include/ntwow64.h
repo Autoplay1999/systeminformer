@@ -240,7 +240,7 @@ typedef struct _RTL_USER_PROCESS_PARAMETERS32
 
     UNICODE_STRING32 RedirectionDllName; // REDSTONE4
     UNICODE_STRING32 HeapPartitionName; // 19H1
-    WOW64_POINTER(ULONG_PTR) DefaultThreadpoolCpuSetMasks;
+    WOW64_POINTER(ULONGLONG) DefaultThreadpoolCpuSetMasks;
     ULONG DefaultThreadpoolCpuSetMaskCount;
     ULONG DefaultThreadpoolThreadMaximum;
 } RTL_USER_PROCESS_PARAMETERS32, *PRTL_USER_PROCESS_PARAMETERS32;
@@ -758,7 +758,7 @@ Wow64CurrentNativeTeb(
     else
     {
         //
-        // Called while runnign under WoW Host, so calculate the position of the
+        // Called while running under WoW Host, so calculate the position of the
         // host teb relative to the current (guest) teb.
         //
 

@@ -206,8 +206,8 @@ VOID PvSetPeImageDosStubHeaderProperties(
 
         __try
         {
-            DOUBLE imageDosStubEntropy = 0;
-            DOUBLE imageDosStubMean = 0;
+            FLOAT imageDosStubEntropy = 0;
+            FLOAT imageDosStubMean = 0;
             PPH_STRING entropyString;
 
             if (PhCalculateEntropy(
@@ -253,8 +253,8 @@ VOID PvSetPeImageDosStubHeaderProperties(
 
         __try
         {
-            DOUBLE imageDosStubEntropy = 0;
-            DOUBLE imageDosStubMean = 0;
+            FLOAT imageDosStubEntropy = 0;
+            FLOAT imageDosStubMean = 0;
             PPH_STRING entropyString;
 
             if (PhCalculateEntropy(
@@ -300,8 +300,8 @@ VOID PvSetPeImageDosStubHeaderProperties(
 
         __try
         {
-            DOUBLE imageDosStubEntropy = 0;
-            DOUBLE imageDosStubMean = 0;
+            FLOAT imageDosStubEntropy = 0;
+            FLOAT imageDosStubMean = 0;
             PPH_STRING entropyString;
 
             if (PhCalculateEntropy(
@@ -600,8 +600,8 @@ VOID PvSetPeImageOverlayHeaderProperties(
 
         __try
         {
-            DOUBLE imageDosStubEntropy = 0;
-            DOUBLE imageDosStubMean = 0;
+            FLOAT imageDosStubEntropy = 0;
+            FLOAT imageDosStubMean = 0;
             PPH_STRING entropyString;
 
             if (PhCalculateEntropy(
@@ -838,7 +838,7 @@ INT_PTR CALLBACK PvPeHeadersDlgProc(
             SetBkMode((HDC)wParam, TRANSPARENT);
             SetTextColor((HDC)wParam, RGB(0, 0, 0));
             SetDCBrushColor((HDC)wParam, RGB(255, 255, 255));
-            return (INT_PTR)GetStockBrush(DC_BRUSH);
+            return (INT_PTR)PhGetStockBrush(DC_BRUSH);
         }
         break;
     }

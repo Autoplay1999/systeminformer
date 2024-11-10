@@ -451,49 +451,6 @@ static NTSTATUS PhpLeakEnumerationRoutine(
     return 0;
 }
 
-typedef struct _STOPWATCH
-{
-    LARGE_INTEGER StartCounter;
-    LARGE_INTEGER EndCounter;
-    LARGE_INTEGER Frequency;
-} STOPWATCH, *PSTOPWATCH;
-
-static VOID PhInitializeStopwatch(
-    _Out_ PSTOPWATCH Stopwatch
-    )
-{
-    Stopwatch->StartCounter.QuadPart = 0;
-    Stopwatch->EndCounter.QuadPart = 0;
-}
-
-static VOID PhStartStopwatch(
-    _Inout_ PSTOPWATCH Stopwatch
-    )
-{
-    PhQueryPerformanceCounter(&Stopwatch->StartCounter);
-    PhQueryPerformanceFrequency(&Stopwatch->Frequency);
-}
-
-static VOID PhStopStopwatch(
-    _Inout_ PSTOPWATCH Stopwatch
-    )
-{
-    PhQueryPerformanceCounter(&Stopwatch->EndCounter);
-}
-
-static ULONG PhGetMillisecondsStopwatch(
-    _In_ PSTOPWATCH Stopwatch
-    )
-{
-    LARGE_INTEGER countsPerMs;
-
-    countsPerMs = Stopwatch->Frequency;
-    countsPerMs.QuadPart /= 1000;
-
-    return (ULONG)((Stopwatch->EndCounter.QuadPart - Stopwatch->StartCounter.QuadPart) /
-        countsPerMs.QuadPart);
-}
-
 typedef VOID (FASTCALL *PPHF_RW_LOCK_FUNCTION)(
     _In_ PVOID Parameter
     );
@@ -544,7 +501,7 @@ static NTSTATUS PhpRwLockTestThreadStart(
             for (m = 0; m < RW_READ_SPIN_ITERS; m++)
                 YieldProcessor();
 
-            if (RwWritersActive != 0)
+            if (ReadAcquire(&RwWritersActive) != 0)
             {
                 wprintf(L"[fail]: writers active in read zone!\n");
                 NtWaitForSingleObject(NtCurrentProcess(), FALSE, NULL);
@@ -570,7 +527,7 @@ static NTSTATUS PhpRwLockTestThreadStart(
                     for (m = 0; m < RW_WRITE_SPIN_ITERS; m++)
                         YieldProcessor();
 
-                    if (RwReadersActive != 0)
+                    if (ReadAcquire(&RwReadersActive) != 0)
                     {
                         wprintf(L"[fail]: readers active in write zone!\n");
                         NtWaitForSingleObject(NtCurrentProcess(), FALSE, NULL);
@@ -592,7 +549,7 @@ static VOID PhpTestRwLock(
 {
 #define RW_PROCESSORS 4
 
-    STOPWATCH stopwatch;
+    PH_STOPWATCH stopwatch;
     ULONG i;
     HANDLE threadHandles[RW_PROCESSORS];
 
@@ -642,6 +599,7 @@ static VOID PhpTestRwLock(
     wprintf(L"[strs] %s: %ums\n", Context->Name, PhGetMillisecondsStopwatch(&stopwatch));
 }
 
+_Acquires_exclusive_lock_(*CriticalSection)
 VOID FASTCALL PhfAcquireCriticalSection(
     _In_ PRTL_CRITICAL_SECTION CriticalSection
     )
@@ -649,6 +607,7 @@ VOID FASTCALL PhfAcquireCriticalSection(
     RtlEnterCriticalSection(CriticalSection);
 }
 
+_Releases_exclusive_lock_(*CriticalSection)
 VOID FASTCALL PhfReleaseCriticalSection(
     _In_ PRTL_CRITICAL_SECTION CriticalSection
     )
@@ -721,8 +680,8 @@ NTSTATUS PhpDebugConsoleThreadStart(
 
     while (!exit)
     {
-        static PWSTR delims = L" \t";
-        static PWSTR commandDebugOnly = L"This command is not available on non-debug builds.\n";
+        static PCWSTR delims = L" \t";
+        static PCWSTR commandDebugOnly = L"This command is not available on non-debug builds.\n";
 
         WCHAR line[201];
         ULONG inputLength;
@@ -783,7 +742,7 @@ NTSTATUS PhpDebugConsoleThreadStart(
         }
         else if (PhEqualStringZ(command, L"testperf", TRUE))
         {
-            STOPWATCH stopwatch;
+            PH_STOPWATCH stopwatch;
             ULONG i;
             PPH_STRING testString;
             RTL_CRITICAL_SECTION testCriticalSection;

@@ -85,6 +85,23 @@ PhInitializeMonospaceFont(
     );
 
 PHLIBAPI
+HDC
+NTAPI
+PhGetScreenDC(
+    VOID
+    );
+
+PHLIBAPI
+HGDIOBJ
+NTAPI
+PhGetStockObject(
+    _In_ LONG Index
+    );
+
+#define PhGetStockBrush(i) ((HBRUSH)PhGetStockObject(i))
+#define PhGetStockPen(i) ((HPEN)PhGetStockObject(i))
+
+PHLIBAPI
 HTHEME
 NTAPI
 PhOpenThemeData(
@@ -120,8 +137,8 @@ BOOLEAN
 NTAPI
 PhIsThemePartDefined(
     _In_ HTHEME ThemeHandle,
-    _In_ INT PartId,
-    _In_ INT StateId
+    _In_ LONG PartId,
+    _In_ LONG StateId
     );
 
 _Success_(return)
@@ -138,12 +155,24 @@ _Success_(return)
 PHLIBAPI
 BOOLEAN
 NTAPI
+PhGetThemeColor(
+    _In_ HTHEME ThemeHandle,
+    _In_ LONG PartId,
+    _In_ LONG StateId,
+    _In_ LONG PropId,
+    _Out_ COLORREF* Color
+    );
+
+_Success_(return)
+PHLIBAPI
+BOOLEAN
+NTAPI
 PhGetThemeInt(
     _In_ HTHEME ThemeHandle,
-    _In_ INT PartId,
-    _In_ INT StateId,
-    _In_ INT PropId,
-    _Out_ PINT Value
+    _In_ LONG PartId,
+    _In_ LONG StateId,
+    _In_ LONG PropId,
+    _Out_ PLONG Value
     );
 
 typedef enum _THEMEPARTSIZE
@@ -160,8 +189,8 @@ NTAPI
 PhGetThemePartSize(
     _In_ HTHEME ThemeHandle,
     _In_opt_ HDC hdc,
-    _In_ INT PartId,
-    _In_ INT StateId,
+    _In_ LONG PartId,
+    _In_ LONG StateId,
     _In_opt_ LPCRECT Rect,
     _In_ THEMEPARTSIZE Flags,
     _Out_ PSIZE Size
@@ -173,10 +202,24 @@ NTAPI
 PhDrawThemeBackground(
     _In_ HTHEME ThemeHandle,
     _In_ HDC hdc,
-    _In_ INT PartId,
-    _In_ INT StateId,
+    _In_ LONG PartId,
+    _In_ LONG StateId,
     _In_ LPCRECT Rect,
     _In_opt_ LPCRECT ClipRect
+    );
+
+PHLIBAPI
+BOOLEAN
+NTAPI
+PhIsHungAppWindow(
+    _In_ HWND WindowHandle
+    );
+
+PHLIBAPI
+HWND
+NTAPI
+PhGetShellWindow(
+    VOID
     );
 
 PHLIBAPI
@@ -227,7 +270,7 @@ PHLIBAPI
 LONG
 NTAPI
 PhGetSystemMetrics(
-    _In_ INT Index,
+    _In_ LONG Index,
     _In_opt_ LONG DpiValue
     );
 
@@ -242,8 +285,8 @@ PHLIBAPI
 BOOL
 NTAPI
 PhGetSystemParametersInfo(
-    _In_ INT Action,
-    _In_ UINT Param1,
+    _In_ LONG Action,
+    _In_ ULONG Param1,
     _Pre_maybenull_ _Post_valid_ PVOID Param2,
     _In_opt_ LONG DpiValue
     );
@@ -334,10 +377,10 @@ FORCEINLINE WNDPROC PhSetWindowProcedure(
 
 #define PH_WINDOW_TIMER_DEFAULT 0xF
 
-FORCEINLINE UINT_PTR PhSetTimer(
+FORCEINLINE ULONG_PTR PhSetTimer(
     _In_ HWND WindowHandle,
-    _In_ UINT_PTR TimerID,
-    _In_ UINT Elapse,
+    _In_ ULONG_PTR TimerID,
+    _In_ ULONG Elapse,
     _In_opt_ TIMERPROC TimerProcedure
     )
 {
@@ -347,7 +390,7 @@ FORCEINLINE UINT_PTR PhSetTimer(
 
 FORCEINLINE BOOL PhKillTimer(
     _In_ HWND WindowHandle,
-    _In_ UINT_PTR TimerID
+    _In_ ULONG_PTR TimerID
     )
 {
     assert(WindowHandle);
@@ -392,7 +435,7 @@ FORCEINLINE
 BOOLEAN
 NTAPI
 PhGetKeyState(
-    _In_ INT VirtualKey
+    _In_ LONG VirtualKey
     )
 {
     return GetKeyState(VirtualKey) < 0;
@@ -404,7 +447,7 @@ PhGetKeyState(
 
 FORCEINLINE LRESULT PhReflectMessage(
     _In_ HWND Handle,
-    _In_ UINT Message,
+    _In_ ULONG Message,
     _In_ WPARAM wParam,
     _In_ LPARAM lParam
     )
@@ -462,43 +505,43 @@ FORCEINLINE VOID PhSetListViewStyle(
 }
 
 PHLIBAPI
-INT
+LONG
 NTAPI
 PhAddListViewColumn(
     _In_ HWND ListViewHandle,
-    _In_ INT Index,
-    _In_ INT DisplayIndex,
-    _In_ INT SubItemIndex,
-    _In_ INT Format,
-    _In_ INT Width,
-    _In_ PWSTR Text
+    _In_ LONG Index,
+    _In_ LONG DisplayIndex,
+    _In_ LONG SubItemIndex,
+    _In_ LONG Format,
+    _In_ LONG Width,
+    _In_ PCWSTR Text
     );
 
 PHLIBAPI
-INT
+LONG
 NTAPI
 PhAddListViewItem(
     _In_ HWND ListViewHandle,
-    _In_ INT Index,
-    _In_ PWSTR Text,
+    _In_ LONG Index,
+    _In_ PCWSTR Text,
     _In_opt_ PVOID Param
     );
 
 PHLIBAPI
-INT
+LONG
 NTAPI
 PhFindListViewItemByFlags(
     _In_ HWND ListViewHandle,
-    _In_ INT StartIndex,
+    _In_ LONG StartIndex,
     _In_ ULONG Flags
     );
 
 PHLIBAPI
-INT
+LONG
 NTAPI
 PhFindListViewItemByParam(
     _In_ HWND ListViewHandle,
-    _In_ INT StartIndex,
+    _In_ LONG StartIndex,
     _In_opt_ PVOID Param
     );
 
@@ -508,8 +551,8 @@ BOOLEAN
 NTAPI
 PhGetListViewItemImageIndex(
     _In_ HWND ListViewHandle,
-    _In_ INT Index,
-    _Out_ PINT ImageIndex
+    _In_ LONG Index,
+    _Out_ PLONG ImageIndex
     );
 
 _Success_(return)
@@ -518,7 +561,7 @@ BOOLEAN
 NTAPI
 PhGetListViewItemParam(
     _In_ HWND ListViewHandle,
-    _In_ INT Index,
+    _In_ LONG Index,
     _Outptr_ PVOID *Param
     );
 
@@ -527,7 +570,7 @@ BOOLEAN
 NTAPI
 PhSetListViewItemParam(
     _In_ HWND ListViewHandle,
-    _In_ INT Index,
+    _In_ LONG Index,
     _In_ PVOID Param
     );
 
@@ -536,7 +579,7 @@ VOID
 NTAPI
 PhRemoveListViewItem(
     _In_ HWND ListViewHandle,
-    _In_ INT Index
+    _In_ LONG Index
     );
 
 PHLIBAPI
@@ -544,8 +587,8 @@ VOID
 NTAPI
 PhSetListViewItemImageIndex(
     _In_ HWND ListViewHandle,
-    _In_ INT Index,
-    _In_ INT ImageIndex
+    _In_ LONG Index,
+    _In_ LONG ImageIndex
     );
 
 PHLIBAPI
@@ -553,9 +596,9 @@ VOID
 NTAPI
 PhSetListViewSubItem(
     _In_ HWND ListViewHandle,
-    _In_ INT Index,
-    _In_ INT SubItemIndex,
-    _In_ PWSTR Text
+    _In_ LONG Index,
+    _In_ LONG SubItemIndex,
+    _In_ PCWSTR Text
     );
 
 PHLIBAPI
@@ -566,32 +609,32 @@ PhRedrawListViewItems(
     );
 
 PHLIBAPI
-INT
+LONG
 NTAPI
 PhAddListViewGroup(
     _In_ HWND ListViewHandle,
-    _In_ INT GroupId,
-    _In_ PWSTR Text
+    _In_ LONG GroupId,
+    _In_ PCWSTR Text
     );
 
 PHLIBAPI
-INT
+LONG
 NTAPI
 PhAddListViewGroupItem(
     _In_ HWND ListViewHandle,
-    _In_ INT GroupId,
-    _In_ INT Index,
-    _In_ PWSTR Text,
+    _In_ LONG GroupId,
+    _In_ LONG Index,
+    _In_ PCWSTR Text,
     _In_opt_ PVOID Param
     );
 
 PHLIBAPI
-INT
+LONG
 NTAPI
 PhAddTabControlTab(
     _In_ HWND TabControlHandle,
-    _In_ INT Index,
-    _In_ PWSTR Text
+    _In_ LONG Index,
+    _In_ PCWSTR Text
     );
 
 #define PhaGetDlgItemText(hwndDlg, id) \
@@ -632,7 +675,7 @@ VOID
 NTAPI
 PhAddComboBoxStrings(
     _In_ HWND WindowHandle,
-    _In_ PWSTR* Strings,
+    _In_ PCWSTR* Strings,
     _In_ ULONG NumberOfStrings
     )
 {
@@ -658,15 +701,15 @@ PPH_STRING
 NTAPI
 PhGetComboBoxString(
     _In_ HWND WindowHandle,
-    _In_ INT Index
+    _In_ LONG Index
     );
 
 PHLIBAPI
-INT
+LONG
 NTAPI
 PhSelectComboBoxString(
     _In_ HWND WindowHandle,
-    _In_ PWSTR String,
+    _In_ PCWSTR String,
     _In_ BOOLEAN Partial
     );
 
@@ -675,7 +718,7 @@ PPH_STRING
 NTAPI
 PhGetListBoxString(
     _In_ HWND WindowHandle,
-    _In_ INT Index
+    _In_ LONG Index
     );
 
 PHLIBAPI
@@ -704,13 +747,20 @@ PhGetSelectedListViewItemParams(
     );
 
 PHLIBAPI
+PVOID
+NTAPI
+PhGetListViewInterface(
+    _In_ HWND ListViewHandle
+    );
+
+PHLIBAPI
 VOID
 NTAPI
 PhSetImageListBitmap(
     _In_ HIMAGELIST ImageList,
-    _In_ INT Index,
+    _In_ LONG Index,
     _In_ HINSTANCE InstanceHandle,
-    _In_ LPCWSTR BitmapName
+    _In_ PCWSTR BitmapName
     );
 
 #define PH_LOAD_ICON_SHARED 0x1
@@ -723,7 +773,7 @@ HICON
 NTAPI
 PhLoadIcon(
     _In_opt_ PVOID ImageBaseAddress,
-    _In_ PWSTR Name,
+    _In_ PCWSTR Name,
     _In_ ULONG Flags,
     _In_opt_ ULONG Width,
     _In_opt_ ULONG Height,
@@ -791,7 +841,7 @@ PhCreateDialogFromTemplate(
     _In_ HWND Parent,
     _In_ ULONG Style,
     _In_ PVOID Instance,
-    _In_ PWSTR Template,
+    _In_ PCWSTR Template,
     _In_ DLGPROC DialogProc,
     _In_ PVOID Parameter
     );
@@ -801,7 +851,7 @@ HWND
 NTAPI
 PhCreateDialog(
     _In_ PVOID Instance,
-    _In_ PWSTR Template,
+    _In_ PCWSTR Template,
     _In_opt_ HWND ParentWindow,
     _In_ DLGPROC DialogProc,
     _In_opt_ PVOID Parameter
@@ -810,15 +860,15 @@ PhCreateDialog(
 PHLIBAPI
 HWND
 NTAPI
-PhCreateWindow(
-    _In_ ULONG ExStyle,
-    _In_opt_ PCWSTR ClassName,
+PhCreateWindowWx(
+    _In_ PCWSTR ClassName,
     _In_opt_ PCWSTR WindowName,
     _In_ ULONG Style,
-    _In_ INT X,
-    _In_ INT Y,
-    _In_ INT Width,
-    _In_ INT Height,
+    _In_ ULONG ExStyle,
+    _In_ LONG X,
+    _In_ LONG Y,
+    _In_ LONG Width,
+    _In_ LONG Height,
     _In_opt_ HWND ParentWindow,
     _In_opt_ HMENU MenuHandle,
     _In_opt_ PVOID InstanceHandle,
@@ -830,7 +880,7 @@ INT_PTR
 NTAPI
 PhDialogBox(
     _In_ PVOID Instance,
-    _In_ PWSTR Template,
+    _In_ PCWSTR Template,
     _In_opt_ HWND ParentWindow,
     _In_ DLGPROC DialogProc,
     _In_opt_ PVOID Parameter
@@ -1041,7 +1091,7 @@ ULONG
 NTAPI
 PhGetDialogItemValue(
     _In_ HWND WindowHandle,
-    _In_ INT ControlID
+    _In_ LONG ControlID
     );
 
 PHLIBAPI
@@ -1049,7 +1099,7 @@ VOID
 NTAPI
 PhSetDialogItemValue(
     _In_ HWND WindowHandle,
-    _In_ INT ControlID,
+    _In_ LONG ControlID,
     _In_ ULONG Value,
     _In_ BOOLEAN Signed
     );
@@ -1059,7 +1109,7 @@ VOID
 NTAPI
 PhSetDialogItemText(
     _In_ HWND WindowHandle,
-    _In_ INT ControlID,
+    _In_ LONG ControlID,
     _In_ PCWSTR WindowText
     );
 
@@ -1155,8 +1205,8 @@ HBITMAP
 NTAPI
 PhIconToBitmap(
     _In_ HICON Icon,
-    _In_ ULONG Width,
-    _In_ ULONG Height
+    _In_ LONG Width,
+    _In_ LONG Height
     );
 
 PHLIBAPI
@@ -1164,8 +1214,8 @@ VOID
 NTAPI
 PhBitmapSetAlpha(
     _In_ PVOID Bits,
-    _In_ ULONG Width,
-    _In_ ULONG Height
+    _In_ LONG Width,
+    _In_ LONG Height
     );
 
 // extlv
@@ -1191,13 +1241,13 @@ typedef enum _PH_ITEM_STATE
 } PH_ITEM_STATE;
 
 typedef COLORREF (NTAPI *PPH_EXTLV_GET_ITEM_COLOR)(
-    _In_ INT Index,
+    _In_ LONG Index,
     _In_ PVOID Param,
     _In_opt_ PVOID Context
     );
 
 typedef HFONT (NTAPI *PPH_EXTLV_GET_ITEM_FONT)(
-    _In_ INT Index,
+    _In_ LONG Index,
     _In_ PVOID Param,
     _In_opt_ PVOID Context
     );
@@ -1223,7 +1273,7 @@ VOID
 NTAPI
 PhSetHeaderSortIcon(
     _In_ HWND hwnd,
-    _In_ INT Index,
+    _In_ LONG Index,
     _In_ PH_SORT_ORDER Order
     );
 
@@ -1536,7 +1586,7 @@ PHLIBAPI
 BOOLEAN
 NTAPI
 PhExtractIcon(
-    _In_ PWSTR FileName,
+    _In_ PCWSTR FileName,
     _Out_opt_ HICON *IconLarge,
     _Out_opt_ HICON *IconSmall
     );
@@ -1548,7 +1598,7 @@ NTAPI
 PhExtractIconEx(
     _In_ PPH_STRINGREF FileName,
     _In_ BOOLEAN NativeFileName,
-    _In_ INT32 IconIndex,
+    _In_ LONG IconIndex,
     _Out_opt_ HICON *IconLarge,
     _Out_opt_ HICON *IconSmall,
     _In_ LONG WindowDpi
@@ -1560,11 +1610,11 @@ PHLIBAPI
 HIMAGELIST
 NTAPI
 PhImageListCreate(
-    _In_ INT32 Width,
-    _In_ INT32 Height,
-    _In_ UINT32 Flags,
-    _In_ INT32 InitialCount,
-    _In_ INT32 GrowCount
+    _In_ LONG Width,
+    _In_ LONG Height,
+    _In_ LONG Flags,
+    _In_ LONG InitialCount,
+    _In_ LONG GrowCount
     );
 
 PHLIBAPI
@@ -1579,7 +1629,7 @@ BOOLEAN
 NTAPI
 PhImageListSetImageCount(
     _In_ HIMAGELIST ImageListHandle,
-    _In_ UINT32 Count
+    _In_ ULONG Count
     );
 
 PHLIBAPI
@@ -1587,7 +1637,7 @@ BOOLEAN
 NTAPI
 PhImageListGetImageCount(
     _In_ HIMAGELIST ImageListHandle,
-    _Out_ PINT32 Count
+    _Out_ PLONG Count
     );
 
 PHLIBAPI
@@ -1603,14 +1653,14 @@ BOOLEAN
 NTAPI
 PhImageListRemoveIcon(
     _In_ HIMAGELIST ImageListHandle,
-    _In_ INT32 Index
+    _In_ LONG Index
     );
 
 #define PhImageListRemoveAll(ImageListHandle) \
     PhImageListRemoveIcon((ImageListHandle), INT_ERROR)
 
 PHLIBAPI
-INT32
+LONG
 NTAPI
 PhImageListAddIcon(
     _In_ HIMAGELIST ImageListHandle,
@@ -1618,7 +1668,7 @@ PhImageListAddIcon(
     );
 
 PHLIBAPI
-INT32
+LONG
 NTAPI
 PhImageListAddBitmap(
     _In_ HIMAGELIST ImageListHandle,
@@ -1631,8 +1681,8 @@ HICON
 NTAPI
 PhImageListGetIcon(
     _In_ HIMAGELIST ImageListHandle,
-    _In_ INT32 Index,
-    _In_ UINT32 Flags
+    _In_ LONG Index,
+    _In_ ULONG Flags
     );
 
 PHLIBAPI
@@ -1640,8 +1690,8 @@ BOOLEAN
 NTAPI
 PhImageListGetIconSize(
     _In_ HIMAGELIST ImageListHandle,
-    _Out_ PINT32 cx,
-    _Out_ PINT32 cy
+    _Out_ PLONG cx,
+    _Out_ PLONG cy
     );
 
 PHLIBAPI
@@ -1649,7 +1699,7 @@ BOOLEAN
 NTAPI
 PhImageListReplace(
     _In_ HIMAGELIST ImageListHandle,
-    _In_ INT32 Index,
+    _In_ LONG Index,
     _In_ HBITMAP BitmapImage,
     _In_opt_ HBITMAP BitmapMask
     );
@@ -1659,10 +1709,10 @@ BOOLEAN
 NTAPI
 PhImageListDrawIcon(
     _In_ HIMAGELIST ImageListHandle,
-    _In_ INT32 Index,
+    _In_ LONG Index,
     _In_ HDC Hdc,
-    _In_ INT32 x,
-    _In_ INT32 y,
+    _In_ LONG x,
+    _In_ LONG y,
     _In_ UINT32 Style,
     _In_ BOOLEAN Disabled
     );
@@ -1672,12 +1722,12 @@ BOOLEAN
 NTAPI
 PhImageListDrawEx(
     _In_ HIMAGELIST ImageListHandle,
-    _In_ INT32 Index,
+    _In_ LONG Index,
     _In_ HDC Hdc,
-    _In_ INT32 x,
-    _In_ INT32 y,
-    _In_ INT32 dx,
-    _In_ INT32 dy,
+    _In_ LONG x,
+    _In_ LONG y,
+    _In_ LONG dx,
+    _In_ LONG dy,
     _In_ COLORREF BackColor,
     _In_ COLORREF ForeColor,
     _In_ UINT Style,
@@ -1689,8 +1739,8 @@ BOOLEAN
 NTAPI
 PhImageListSetIconSize(
     _In_ HIMAGELIST ImageListHandle,
-    _In_ INT32 cx,
-    _In_ INT32 cy
+    _In_ LONG cx,
+    _In_ LONG cy
     );
 
 #define PH_SHUTDOWN_RESTART 0x1
@@ -1754,6 +1804,22 @@ PhCustomDrawTreeTimeLine(
 
 // Windows Imaging Component (WIC) bitmap support
 
+typedef enum _PH_BUFFERFORMAT
+{
+    PHBF_COMPATIBLEBITMAP,    // Compatible bitmap
+    PHBF_DIB,                 // Device-independent bitmap
+    PHBF_TOPDOWNDIB,          // Top-down device-independent bitmap
+    PHBF_TOPDOWNMONODIB       // Top-down monochrome device-independent bitmap
+} PH_BUFFERFORMAT;
+
+HBITMAP PhCreateDIBSection(
+    _In_ HDC Hdc,
+    _In_ PH_BUFFERFORMAT Format,
+    _In_ LONG Width,
+    _In_ LONG Height,
+    _Outptr_opt_ _When_(return != NULL, _Notnull_) PVOID* Bits
+    );
+
 typedef enum _PH_IMAGE_FORMAT_TYPE
 {
     PH_IMAGE_FORMAT_TYPE_NONE,
@@ -1771,8 +1837,8 @@ PhLoadImageFormatFromResource(
     _In_ PCWSTR Name,
     _In_ PCWSTR Type,
     _In_ PH_IMAGE_FORMAT_TYPE Format,
-    _In_ UINT Width,
-    _In_ UINT Height
+    _In_ LONG Width,
+    _In_ LONG Height
     );
 
 PHLIBAPI
@@ -1782,17 +1848,17 @@ PhLoadImageFromResource(
     _In_ PVOID DllBase,
     _In_ PCWSTR Name,
     _In_ PCWSTR Type,
-    _In_ UINT Width,
-    _In_ UINT Height
+    _In_ LONG Width,
+    _In_ LONG Height
     );
 
 PHLIBAPI
 HBITMAP
 NTAPI
 PhLoadImageFromFile(
-    _In_ PWSTR FileName,
-    _In_ UINT Width,
-    _In_ UINT Height
+    _In_ PCWSTR FileName,
+    _In_ LONG Width,
+    _In_ LONG Height
     );
 
 // Acrylic support
@@ -2052,7 +2118,7 @@ PhWindowThemeControlColor(
     _In_ HWND WindowHandle,
     _In_ HDC Hdc,
     _In_ HWND ChildWindowHandle,
-    _In_ INT Type
+    _In_ LONG Type
     );
 
 PHLIBAPI
@@ -2098,7 +2164,7 @@ FORCEINLINE
 HFONT
 NTAPI
 PhCreateFont(
-    _In_opt_ PWSTR Name,
+    _In_opt_ PCWSTR Name,
     _In_ ULONG Size,
     _In_ ULONG Weight,
     _In_ ULONG PitchAndFamily,
@@ -2274,8 +2340,8 @@ VOID
 NTAPI
 PhInflateRect(
     _In_ PRECT Rect,
-    _In_ INT dx,
-    _In_ INT dy
+    _In_ LONG dx,
+    _In_ LONG dy
     )
 {
 #if (PHNT_NATIVE_RECT)
@@ -2293,8 +2359,8 @@ VOID
 NTAPI
 PhOffsetRect(
     _In_ PRECT Rect,
-    _In_ INT dx,
-    _In_ INT dy
+    _In_ LONG dx,
+    _In_ LONG dy
     )
 {
 #if (PHNT_NATIVE_RECT)
@@ -2338,6 +2404,10 @@ HICON PhGdiplusConvertBitmapToIcon(
 
 HWND PhCreateBackgroundWindow(
     _In_ HWND ParentWindowHandle
+    );
+
+HICON PhGdiplusConvertHBitmapToHIcon(
+    _In_ HBITMAP NitmapHandle
     );
 
 EXTERN_C_END

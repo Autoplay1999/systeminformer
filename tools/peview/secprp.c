@@ -436,26 +436,19 @@ END_SORT_FUNCTION
 BOOLEAN NTAPI PvCertificateTreeNewCallback(
     _In_ HWND hwnd,
     _In_ PH_TREENEW_MESSAGE Message,
-    _In_opt_ PVOID Parameter1,
-    _In_opt_ PVOID Parameter2,
-    _In_opt_ PVOID Context
+    _In_ PVOID Parameter1,
+    _In_ PVOID Parameter2,
+    _In_ PVOID Context
     )
 {
     PPV_PE_CERTIFICATE_CONTEXT context = Context;
     PPV_CERTIFICATE_NODE node;
-
-    if (!context)
-        return FALSE;
 
     switch (Message)
     {
     case TreeNewGetChildren:
         {
             PPH_TREENEW_GET_CHILDREN getChildren = Parameter1;
-
-            if (!getChildren)
-                break;
-
             node = (PPV_CERTIFICATE_NODE)getChildren->Node;
 
             if (context->TreeNewSortOrder == NoSortOrder)
@@ -510,10 +503,6 @@ BOOLEAN NTAPI PvCertificateTreeNewCallback(
     case TreeNewIsLeaf:
         {
             PPH_TREENEW_IS_LEAF isLeaf = Parameter1;
-
-            if (!isLeaf)
-                break;
-
             node = (PPV_CERTIFICATE_NODE)isLeaf->Node;
 
             if (context->TreeNewSortOrder == NoSortOrder)
@@ -525,10 +514,6 @@ BOOLEAN NTAPI PvCertificateTreeNewCallback(
     case TreeNewGetCellText:
         {
             PPH_TREENEW_GET_CELL_TEXT getCellText = Parameter1;
-
-            if (!getCellText)
-                break;
-
             node = (PPV_CERTIFICATE_NODE)getCellText->Node;
 
             switch (getCellText->Id)
@@ -606,10 +591,6 @@ BOOLEAN NTAPI PvCertificateTreeNewCallback(
     case TreeNewGetNodeColor:
         {
             PPH_TREENEW_GET_NODE_COLOR getNodeColor = Parameter1;
-
-            if (!getNodeColor)
-                break;
-
             node = (PPV_CERTIFICATE_NODE)getNodeColor->Node;
 
             //if (!node->WindowVisible)
@@ -620,7 +601,11 @@ BOOLEAN NTAPI PvCertificateTreeNewCallback(
         return TRUE;
     case TreeNewSortChanged:
         {
-            TreeNew_GetSort(hwnd, &context->TreeNewSortColumn, &context->TreeNewSortOrder);
+            PPH_TREENEW_SORT_CHANGED_EVENT sorting = Parameter1;
+
+            context->TreeNewSortColumn = sorting->SortColumn;
+            context->TreeNewSortOrder = sorting->SortOrder;
+
             // Force a rebuild to sort the items.
             TreeNew_NodesStructured(hwnd);
         }
@@ -628,9 +613,6 @@ BOOLEAN NTAPI PvCertificateTreeNewCallback(
     case TreeNewKeyDown:
         {
             PPH_TREENEW_KEY_EVENT keyEvent = Parameter1;
-
-            if (!keyEvent)
-                break;
 
             switch (keyEvent->VirtualKey)
             {
@@ -814,10 +796,7 @@ VOID PvSelectAndEnsureVisibleCertificateNodes(
     if (needsRestructure)
         TreeNew_NodesStructured(Context->TreeNewHandle);
 
-    TreeNew_SetFocusNode(Context->TreeNewHandle, &leader->Node);
-    TreeNew_SetMarkNode(Context->TreeNewHandle, &leader->Node);
-    TreeNew_EnsureVisible(Context->TreeNewHandle, &leader->Node);
-    TreeNew_InvalidateNode(Context->TreeNewHandle, &leader->Node);
+    TreeNew_FocusMarkSelectNode(Context->TreeNewHandle, &leader->Node);
 }
 
 PPH_STRING PvpPeFormatDateTime(
@@ -1283,7 +1262,7 @@ VOID PvpPeEnumerateFileCertificates(
     ULONG certificateContentType;
     ULONG certificateFormatType;
 
-    if (NT_SUCCESS(PhGetMappedImageDataEntry(&PvMappedImage, IMAGE_DIRECTORY_ENTRY_SECURITY, &dataDirectory)))
+    if (NT_SUCCESS(PhGetMappedImageDataDirectory(&PvMappedImage, IMAGE_DIRECTORY_ENTRY_SECURITY, &dataDirectory)))
     {
         LPWIN_CERTIFICATE certificateDirectory = PTR_ADD_OFFSET(PvMappedImage.ViewBase, dataDirectory->VirtualAddress);
         CERT_BLOB certificateBlob = { certificateDirectory->dwLength, certificateDirectory->bCertificate };
@@ -1427,10 +1406,7 @@ VOID PvpPeSaveCertificateContext(
     cryptExportCertInfo.cStores = 1;
     cryptExportCertInfo.rghStores = &certStore;
 
-    if (CryptUIWizExport)
-    {
-        CryptUIWizExport(0, WindowHandle, NULL, &cryptExportCertInfo, NULL);
-    }
+    CryptUIWizExport(0, WindowHandle, NULL, &cryptExportCertInfo, NULL);
 }
 
 VOID NTAPI PhpPeSecuritySearchControlCallback(
@@ -1642,7 +1618,16 @@ INT_PTR CALLBACK PvpPeSecurityDlgProc(
              SetBkMode((HDC)wParam, TRANSPARENT);
              SetTextColor((HDC)wParam, RGB(0, 0, 0));
              SetDCBrushColor((HDC)wParam, RGB(255, 255, 255));
-             return (INT_PTR)GetStockBrush(DC_BRUSH);
+             return (INT_PTR)PhGetStockBrush(DC_BRUSH);
+         }
+         break;
+     case WM_KEYDOWN:
+         {
+             if (LOWORD(wParam) == 'K' && GetKeyState(VK_CONTROL) < 0)
+             {
+                 SetFocus(context->SearchHandle);
+                 return TRUE;
+             }
          }
          break;
     }

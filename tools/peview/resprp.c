@@ -50,7 +50,7 @@ typedef struct _PV_RESOURCE_NODE
     PVOID RvaStart;
     PVOID RvaEnd;
     ULONG RvaSize;
-    DOUBLE ResourcesEntropy;
+    FLOAT ResourcesEntropy;
     PPH_STRING UniqueIdString;
     PPH_STRING TypeString;
     PPH_STRING NameString;
@@ -170,37 +170,37 @@ PPH_STRING PvpGetResourceTypeString(
 {
     switch (Type)
     {
-    case RT_CURSOR:
+    case (ULONG_PTR)RT_CURSOR:
         return PhCreateString(L"RT_CURSOR");
-    case RT_BITMAP:
+    case (ULONG_PTR)RT_BITMAP:
         return PhCreateString(L"RT_BITMAP");
-    case RT_ICON:
+    case (ULONG_PTR)RT_ICON:
         return PhCreateString(L"RT_ICON");
-    case RT_MENU:
+    case (ULONG_PTR)RT_MENU:
         return PhCreateString(L"RT_MENU");
-    case RT_DIALOG:
+    case (ULONG_PTR)RT_DIALOG:
         return PhCreateString(L"RT_DIALOG");
-    case RT_STRING:
+    case (ULONG_PTR)RT_STRING:
         return PhCreateString(L"RT_STRING");
-    case RT_FONTDIR:
+    case (ULONG_PTR)RT_FONTDIR:
         return PhCreateString(L"RT_FONTDIR");
-    case RT_FONT:
+    case (ULONG_PTR)RT_FONT:
         return PhCreateString(L"RT_FONT");
-    case RT_ACCELERATOR:
+    case (ULONG_PTR)RT_ACCELERATOR:
         return PhCreateString(L"RT_ACCELERATOR");
-    case RT_RCDATA:
+    case (ULONG_PTR)RT_RCDATA:
         return PhCreateString(L"RT_RCDATA");
-    case RT_MESSAGETABLE:
+    case (ULONG_PTR)RT_MESSAGETABLE:
         return PhCreateString(L"RT_MESSAGETABLE");
-    case RT_GROUP_CURSOR:
+    case (ULONG_PTR)RT_GROUP_CURSOR:
         return PhCreateString(L"RT_GROUP_CURSOR");
-    case RT_GROUP_ICON:
+    case (ULONG_PTR)RT_GROUP_ICON:
         return PhCreateString(L"RT_GROUP_ICON");
-    case RT_VERSION:
+    case (ULONG_PTR)RT_VERSION:
         return PhCreateString(L"RT_VERSION");
-    case RT_ANICURSOR:
+    case (ULONG_PTR)RT_ANICURSOR:
         return PhCreateString(L"RT_ANICURSOR");
-    case RT_MANIFEST:
+    case (ULONG_PTR)RT_MANIFEST:
         return PhCreateString(L"RT_MANIFEST");
     }
 
@@ -440,7 +440,7 @@ VOID PvpPeEnumMappedImageResources(
                 {
                     __try
                     {
-                        DOUBLE imageResourceEntropy;
+                        FLOAT imageResourceEntropy;
 
                         if (PhCalculateEntropy(
                             resourceData,
@@ -716,7 +716,16 @@ INT_PTR CALLBACK PvPeResourcesDlgProc(
             SetBkMode((HDC)wParam, TRANSPARENT);
             SetTextColor((HDC)wParam, RGB(0, 0, 0));
             SetDCBrushColor((HDC)wParam, RGB(255, 255, 255));
-            return (INT_PTR)GetStockBrush(DC_BRUSH);
+            return (INT_PTR)PhGetStockBrush(DC_BRUSH);
+        }
+        break;
+    case WM_KEYDOWN:
+        {
+            if (LOWORD(wParam) == 'K' && GetKeyState(VK_CONTROL) < 0)
+            {
+                SetFocus(context->SearchHandle);
+                return TRUE;
+            }
         }
         break;
     }
@@ -950,26 +959,19 @@ END_SORT_FUNCTION
 BOOLEAN NTAPI PvResourcesTreeNewCallback(
     _In_ HWND hwnd,
     _In_ PH_TREENEW_MESSAGE Message,
-    _In_opt_ PVOID Parameter1,
-    _In_opt_ PVOID Parameter2,
-    _In_opt_ PVOID Context
+    _In_ PVOID Parameter1,
+    _In_ PVOID Parameter2,
+    _In_ PVOID Context
     )
 {
     PPV_RESOURCES_CONTEXT context = Context;
     PPV_RESOURCE_NODE node;
-
-    if (!context)
-        return FALSE;
 
     switch (Message)
     {
     case TreeNewGetChildren:
         {
             PPH_TREENEW_GET_CHILDREN getChildren = Parameter1;
-
-            if (!getChildren)
-                break;
-
             node = (PPV_RESOURCE_NODE)getChildren->Node;
 
             if (!getChildren->Node)
@@ -1008,10 +1010,6 @@ BOOLEAN NTAPI PvResourcesTreeNewCallback(
     case TreeNewIsLeaf:
         {
             PPH_TREENEW_IS_LEAF isLeaf = (PPH_TREENEW_IS_LEAF)Parameter1;
-
-            if (!isLeaf)
-                break;
-
             node = (PPV_RESOURCE_NODE)isLeaf->Node;
 
             isLeaf->IsLeaf = TRUE;
@@ -1020,10 +1018,6 @@ BOOLEAN NTAPI PvResourcesTreeNewCallback(
     case TreeNewGetCellText:
         {
             PPH_TREENEW_GET_CELL_TEXT getCellText = (PPH_TREENEW_GET_CELL_TEXT)Parameter1;
-
-            if (!getCellText)
-                break;
-
             node = (PPV_RESOURCE_NODE)getCellText->Node;
 
             switch (getCellText->Id)
@@ -1065,10 +1059,6 @@ BOOLEAN NTAPI PvResourcesTreeNewCallback(
     case TreeNewGetNodeColor:
         {
             PPH_TREENEW_GET_NODE_COLOR getNodeColor = (PPH_TREENEW_GET_NODE_COLOR)Parameter1;
-
-            if (!getNodeColor)
-                break;
-
             node = (PPV_RESOURCE_NODE)getNodeColor->Node;
 
             if (node->NodeType == PV_RESOURCES_TREE_NODE_TYPE_MUI)
@@ -1081,7 +1071,11 @@ BOOLEAN NTAPI PvResourcesTreeNewCallback(
         return TRUE;
     case TreeNewSortChanged:
         {
-            TreeNew_GetSort(hwnd, &context->TreeNewSortColumn, &context->TreeNewSortOrder);
+            PPH_TREENEW_SORT_CHANGED_EVENT sorting = Parameter1;
+
+            context->TreeNewSortColumn = sorting->SortColumn;
+            context->TreeNewSortOrder = sorting->SortOrder;
+
             TreeNew_NodesStructured(hwnd);
         }
         return TRUE;
